@@ -29,7 +29,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="st-gcn",
-    version="0.1.0",
+    version="0.1.1",
     description="Research repository for Continual Spatio-Temporal Graph Convolutional Neural Networks",
     long_description=long_description(),
     long_description_content_type="text/markdown",
@@ -37,6 +37,6 @@ setup(
     author_email="lukasxhedegaard@gmail.com",
     url="https://github.com/LukasHedegaard/st-gcn",
     install_requires=from_file("requirements.txt"),
-    extras_require={"test": from_file("requirements-test.txt")},
+    extras_require={"dev": from_file("requirements-dev.txt")},
     packages=find_packages(exclude=["test"]),
 )
