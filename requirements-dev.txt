@@ -1,0 +1,8 @@
+black
+flake8
+flake8-black
+isort>=5.7
+pytest
+pytest-cov
+ray[tune]~=1.2
+wandb

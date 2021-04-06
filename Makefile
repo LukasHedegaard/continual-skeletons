@@ -16,7 +16,7 @@ endif
 ## Install packages
 install:
 	python -m pip install --upgrade pip
-	pip install -e .[test]
+	pip install -e .[dev]
 
 
 ## Delete all compiled Python files
@@ -36,7 +36,7 @@ clean:
 ## Test the setup
 test:
 	@echo ⚡⚡⚡ Testing ⚡⚡⚡
-	py.test --cov ride --cov-report term-missing
+	py.test --cov models --cov datasets --cov-report term-missing
 
 
 ## Upload to codecov.io
@@ -54,7 +54,7 @@ lint:
 	@echo ⚡⚡⚡ Linting with flake8 ⚡⚡⚡
 	flake8 . --max-complexity=12 --max-line-length=88 --select=C,E,F,W,B,B950,BLK --ignore=E203,E231,E501,W503 --exclude=.cache
 
-	
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
