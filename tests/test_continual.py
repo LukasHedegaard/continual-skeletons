@@ -1,9 +1,6 @@
 import torch
 from torch.nn import Conv1d, Conv2d, AvgPool1d
-
 from models.cost_gcn.continual import ConvCo1d, ConvCo2d, AvgPoolCo1d
-
-# from models.cost_gcn.cost_gcn import CoStGcn
 
 
 def test_ConvCo1d():
@@ -153,21 +150,3 @@ def test_AvgPoolCo1d():
     # Whole time-series
     output = co_pool.forward_regular(sample)
     assert torch.allclose(target, output)
-
-
-# def default_hparams():
-#     d = CoStGcn.configs().default_values()
-#     d["max_epochs"] = 1
-#     d["batch_size"] = 2
-#     return d
-
-
-# def xtest_forward():
-#     hparams = default_hparams()
-#     hparams["dataset_name"] = "dummy"
-#     net = CoStGcn(hparams)
-
-#     input = torch.rand((hparams["batch_size"], *net.input_shape))
-#     output = net(input)
-
-#     assert output.shape == (hparams["batch_size"], *net.output_shape)
