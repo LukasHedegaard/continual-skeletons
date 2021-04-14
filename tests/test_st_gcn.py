@@ -1,6 +1,6 @@
 import torch
 
-from models.stgcn import StGcn
+from models.st_gcn import StGcn
 
 
 def default_hparams():
