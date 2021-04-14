@@ -2,7 +2,6 @@
 Modified based on: https://github.com/open-mmlab/mmskeleton
 """
 import ride  # isort:skip
-import math
 
 import numpy as np
 import torch
@@ -10,6 +9,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from datasets import datasets
+from models.utils import init_weights
 
 
 class StGcn(
@@ -73,46 +73,12 @@ class StGcn(
             .view(N * M, C, T, V)
         )
         for i in range(len(self.layers)):
-            x = self.layers["layer" + str(i + 1)](x)
+            x = self.layers[f"layer{i + 1}"](x)
         # N*M,C,T,V
         c_new = x.size(1)
         x = x.view(N, M, c_new, -1)
         x = x.mean(3).mean(1)
         return self.fc(x)
-
-
-def import_class(name):
-    components = name.split(".")
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
-
-
-def init_weights(module_, bs=1):
-    if isinstance(module_, nn.Conv2d) and bs == 1:
-        nn.init.kaiming_normal_(module_.weight, mode="fan_out")
-        nn.init.constant_(module_.bias, 0)
-    elif isinstance(module_, nn.Conv2d) and bs != 1:
-        nn.init.normal_(
-            module_.weight,
-            0,
-            math.sqrt(
-                2.0
-                / (
-                    module_.weight.size(0)
-                    * module_.weight.size(1)
-                    * module_.weight.size(2)
-                    * bs
-                )
-            ),
-        )
-        nn.init.constant_(module_.bias, 0)
-    elif isinstance(module_, nn.BatchNorm2d):
-        nn.init.constant_(module_.weight, bs)
-        nn.init.constant_(module_.bias, 0)
-    elif isinstance(module_, nn.Linear):
-        nn.init.normal_(module_.weight, 0, math.sqrt(2.0 / bs))
 
 
 class GraphConvolution(nn.Module):
@@ -195,5 +161,5 @@ class StGcnBlock(nn.Module):
         return self.relu(x)
 
 
-if __name__ == "__main__":
-    ride.Main(StGcn).argparse()  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
+    ride.Main(StGcn).argparse()
