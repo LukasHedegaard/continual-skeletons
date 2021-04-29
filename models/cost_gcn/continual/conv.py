@@ -2,10 +2,6 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 from typing import Tuple
-from enum import Enum
-from torch.nn import Module
-from functools import wraps
-from typing import Callable
 from torch.nn.modules.conv import (
     _ConvNd,
     _reverse_repeat_tuple,
@@ -14,36 +10,13 @@ from torch.nn.modules.conv import (
     _size_2_t,
     _pair,
 )
-from torch.nn.modules.pooling import _AvgPoolNd, AdaptiveAvgPool1d
-
+from .utils import FillMode
 from ride.utils.logging import getLogger
 
 
-class FillMode(Enum):
-    REPLICATE = "replicate"
-    ZEROS = "zeros"
-
-
-State = Tuple[Tensor, int]
+State = Tuple[Tensor, int, int]
 
 logger = getLogger(__name__, log_once=True)
-
-
-def unsqueezed(instance: Module, dim: int = 2):
-    def decorator(func: Callable[[Tensor], Tensor]):
-        @wraps(func)
-        def call(x: Tensor) -> Tensor:
-            x = x.unsqueeze(dim)
-            x = func(x)
-            x = x.squeeze(dim)
-            return x
-
-        return call
-
-    instance.forward_regular = instance.forward
-    instance.forward = decorator(instance.forward)
-
-    return instance
 
 
 class ConvCo1d(_ConvNd):
@@ -110,7 +83,7 @@ class ConvCo1d(_ConvNd):
         stride = _single(stride)
         if stride[0] > 1:
             logger.warn(
-                f"Temporal stride of {stride[0]} will result in repeated outputs every {stride[0]-1} / {stride[0]} steps"
+                f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
             )
 
         dilation = _single(dilation)
@@ -269,7 +242,7 @@ class ConvCo1d(_ConvNd):
             o, (self.state_buffer, self.state_index, self.stride_index) = self._forward(
                 i, self.get_state()
             )
-            if self.kernel_size[0] - 1 <= t and o != None:
+            if self.kernel_size[0] - 1 <= t and o is not None:
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -355,8 +328,8 @@ class ConvCo2d(_ConvNd):
 
         stride = _pair(stride)
         if stride[0] > 1:
-            logger.warn(
-                f"Temporal stride of {stride[0]} will result in repeated outputs every {stride[0]-1} / {stride[0]} steps"
+            logger.warning(
+                f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
             )
 
         dilation = _pair(dilation)
@@ -464,15 +437,6 @@ class ConvCo2d(_ConvNd):
         # B, C, S -> B, C, 1, S
         x = input.unsqueeze(2)
 
-        # x = F.conv1d(
-        #     input=x,
-        #     weight=self.weight,
-        #     bias=None,
-        #     stride=(1,),
-        #     padding=(self.kernel_size[0] - 1,),
-        #     dilation=self.dilation,
-        #     groups=self.groups,
-        # )
         if self.padding_mode == "zeros":
             x = F.conv2d(
                 input=x,
@@ -508,14 +472,18 @@ class ConvCo2d(_ConvNd):
                 x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
             if self.bias is not None:
-                x_out += self.bias[None, :]
+                x_out += self.bias[None, :, None]
         else:
             x_out = None
 
         # Update next state
-        next_buffer = buffer.clone() if self.training else buffer.detach()
-        next_buffer[index] = x_rest
-        next_index = (index + 1) % tot
+        if self.kernel_size[0] > 1:
+            next_buffer = buffer.clone() if self.training else buffer.detach()
+            next_buffer[index] = x_rest
+            next_index = (index + 1) % tot
+        else:
+            next_buffer = buffer
+            next_index = index
         next_stride_index = (stride_index + 1) % self.stride[0]
 
         return x_out, (next_buffer, next_index, next_stride_index)
@@ -537,7 +505,7 @@ class ConvCo2d(_ConvNd):
             o, (self.state_buffer, self.state_index, self.stride_index) = self._forward(
                 i, self.get_state()
             )
-            if self.kernel_size[0] - 1 <= t and o != None:
+            if self.kernel_size[0] - 1 <= t and o is not None:
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -557,132 +525,7 @@ class ConvCo2d(_ConvNd):
 
     @property
     def delay(self):
-        return self.kernel_size[0] - 1
-
-
-class AvgPoolCo1d(_AvgPoolNd):
-    """
-    Continual Average Pool in 1D
-
-    Pooling results are stored between `forward` exercutions and used to pool subsequent
-    inputs along the temporal dimension with a spacified `window_size`.
-    Example: For `window_size = 3`, the two previous results are stored and used for pooling.
-    `temporal_fill` determines whether to initialize the state with a ``'replicate'`` of the
-    output of the first execution or with with ``'zeros'``.
-    """
-
-    def __init__(
-        self,
-        window_size: int,
-        temporal_fill: FillMode = "replicate",
-        temporal_dilation: int = 1,
-        *args,
-        **kwargs,
-    ):
-        assert window_size > 0
-        assert temporal_fill in {"zeros", "replicate"}
-        self.window_size = window_size
-        self.temporal_dilation = temporal_dilation
-        self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
-            temporal_fill
-        ]
-        super(AvgPoolCo1d, self).__init__(*args, **kwargs)
-
-        self.temporal_pool = AdaptiveAvgPool1d(1)
-
-        if self.temporal_dilation > 1:
-            self.frame_index_selection = torch.tensor(
-                range(0, self.window_size, self.temporal_dilation)
-            )
-
-        # state is initialised in self.forward
-
-    def init_state(
-        self,
-        first_output: Tensor,
-    ) -> State:
-        padding = self.make_padding(first_output)
-        state_buffer = torch.stack([padding for _ in range(self.window_size)], dim=0)
-        state_index = 0
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
-        return state_buffer, state_index
-
-    def clean_state(self):
-        self.state_buffer = None
-        self.state_index = None
-
-    def get_state(self):
-        if (
-            hasattr(self, "state_buffer")
-            and self.state_buffer is not None
-            and hasattr(self, "state_index")
-            and self.state_buffer is not None
-        ):
-            return (self.state_buffer, self.state_index)
-        else:
-            return None
-
-    def forward(self, input: Tensor) -> Tensor:
-        output, (self.state_buffer, self.state_index) = self._forward(
-            input, self.get_state()
-        )
-        return output
-
-    def _forward(
-        self,
-        input: Tensor,
-        prev_state: State,
-    ) -> Tuple[Tensor, State]:
-        assert len(input.shape) == 2, "Only a single time-instance should be passed."
-
-        if prev_state is None:
-            buffer, index = self.init_state(input)
-        else:
-            buffer, index = prev_state
-
-        buffer[index] = input
-
-        if self.temporal_dilation == 1:
-            frame_selection = buffer
-        else:
-            frame_selection = buffer.index_select(
-                dim=0, index=self.frame_index_selection
-            )
-
-        _, B, C = frame_selection.shape
-        pooled_window = self.temporal_pool(
-            frame_selection.permute(1, 2, 0)  # T, B, C -> B, C, T
-        ).reshape(B, C)
-        new_index = (index + 1) % self.window_size
-        new_buffer = buffer.clone() if self.training else buffer.detach()
-
-        return pooled_window, (new_buffer, new_index)
-
-    def forward_regular(self, input: Tensor):
-        """If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
-        Otherwise, the pooling is performed per frame
-        """
-        assert (
-            len(input.shape) == 3
-        ), "A tensor of size B,C,T should be passed as input."
-
-        outs = []
-        for t in range(input.shape[2]):
-            o = self.forward(input[:, :, t])
-            if self.window_size - 1 <= t:
-                outs.append(o)
-
-        if len(outs) == 0:
-            return torch.tensor([])
-
-        if input.shape[2] == self.window_size:
-            # In order to be compatible with downstream forward_regular, select only last frame
-            # This corrsponds to the regular global pool
-            return outs[-1].unsqueeze(2)
-
-        else:
-            return torch.stack(outs, dim=2)
+        return self.kernel_size[0] - 1 - self.padding[0]
 
 
 # Make sure the flops are counted in `ptflops`
