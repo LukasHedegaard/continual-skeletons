@@ -123,12 +123,12 @@ class TemporalConvolution(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=9, stride=1):
         super(TemporalConvolution, self).__init__()
 
-        pad = int((kernel_size - 1) / 2)
+        self.pad = int((kernel_size - 1) / 2)
         self.t_conv = nn.Conv2d(
             in_channels,
             out_channels,
             kernel_size=(kernel_size, 1),
-            padding=(pad, 0),
+            padding=(self.pad, 0),
             stride=(stride, 1),
         )
         self.bn = nn.BatchNorm2d(out_channels)
@@ -157,7 +157,8 @@ class StGcnBlock(nn.Module):
             )
 
     def forward(self, x):
-        x = self.tcn(self.gcn(x)) + self.residual(x)
+        r = self.residual(x)
+        x = self.tcn(self.gcn(x)) + r
         return self.relu(x)
 
 
