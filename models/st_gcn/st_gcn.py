@@ -157,9 +157,9 @@ class StGcnBlock(nn.Module):
             )
 
     def forward(self, x):
+        z = self.tcn(self.gcn(x))
         r = self.residual(x)
-        x = self.tcn(self.gcn(x)) + r
-        return self.relu(x)
+        return self.relu(z + r)
 
 
 if __name__ == "__main__":  # pragma: no cover
