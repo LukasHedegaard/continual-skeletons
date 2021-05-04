@@ -82,7 +82,7 @@ class ConvCo1d(_ConvNd):
 
         stride = _single(stride)
         if stride[0] > 1:
-            logger.warn(
+            logger.warning(
                 f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
             )
 
@@ -536,4 +536,4 @@ try:
     fc.MODULES_MAPPING[ConvCo2d] = fc.conv_flops_counter_hook
     # Skip AvgPoolCo1d since it uses AdaptiveAvgPool1d internally (already present in ptflops)
 except Exception as e:
-    logger.warn(f"Failed to add flops_counter_hook: {e}")
+    logger.warning(f"Failed to add flops_counter_hook: {e}")
