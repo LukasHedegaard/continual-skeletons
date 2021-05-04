@@ -292,6 +292,10 @@ def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
             else:
                 return torch.stack(outs, dim=2)
 
+        @property
+        def delay(self):
+            return self.window_size - 1
+
     RePooled.__doc__ = f"""
     Recursive {cls.__name__}
 
