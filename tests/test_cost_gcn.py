@@ -247,7 +247,7 @@ def test_CoStGcnBlock_residual_neq_channels_strided():
     assert all(checks)
 
 
-def test_simple_stgcn():
+def test_simple_costgcn():
     # Prepare data
     T = 40
     B = 2
@@ -295,7 +295,7 @@ def test_simple_stgcn():
         torch.allclose(
             target[:, :, t],
             output[t * stride + co_delay],
-            atol=5e-7,
+            atol=5e-6,
         )
         for t in range(co_pads, (T - co_delay) // stride)
     ]
