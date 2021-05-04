@@ -36,6 +36,15 @@ class CoStGcn(
             default="ntu_rgbd",
             choices=["ntu_rgbd", "kinetics"],
         )
+        c.add(
+            name="pool_size",
+            type=int,
+            default=-1,
+            description=(
+                "Size of pooling layer. If `-1`, a pool size will be chosen, "
+                "which matches the network delay to the input_shape"
+            ),
+        )
         return c
 
     def __init__(self, hparams):
@@ -64,7 +73,13 @@ class CoStGcn(
                 "layer10": CoStGcnBlock(256, 256, A),
             }
         )
-        self.pool = AdaptiveAvgPoolCo2d(window_size=num_frames, output_size=(1,))
+        self.pool_size = hparams.pool_size
+        if self.pool_size == -1:
+            st_gcn_delay = sum(
+                [self.layers[f"layer{i + 1}"].delay for i in range(len(self.layers))]
+            )
+            self.pool_size = num_frames - st_gcn_delay + 1
+        self.pool = AdaptiveAvgPoolCo2d(window_size=self.pool_size, output_size=(1,))
         self.fc = nn.Linear(256, num_classes)
 
         # Initialize weights
@@ -87,6 +102,19 @@ class CoStGcn(
         x = self.fc(x)
         self.last_output = x
         return x
+
+    @property
+    def delay(self):
+        d = sum([self.layers[f"layer{i + 1}"].delay for i in range(len(self.layers))])
+        d += self.pool.delay
+        return d
+
+    @property
+    def stride(self):
+        s = np.prod(
+            [self.layers[f"layer{i + 1}"].stride for i in range(len(self.layers))]
+        )
+        return s
 
 
 class GraphConvolution(nn.Module):
@@ -172,28 +200,28 @@ class CoTemporalConvolution(nn.Module):
 class CoStGcnBlock(nn.Module):
     def __init__(self, in_channels, out_channels, A, stride=1, residual=True):
         super(CoStGcnBlock, self).__init__()
-
+        self.stride = stride
         self.gcn = unsqueezed(GraphConvolution(in_channels, out_channels, A))
         self.tcn = CoTemporalConvolution(out_channels, out_channels, stride=stride)
         self.relu = nn.ReLU()
         if not residual:
             self.residual = lambda x: 0
-        elif (in_channels == out_channels) and (stride == 1):
+        elif (in_channels == out_channels) and (self.stride == 1):
             self.residual = Delay(self.tcn.t_conv.delay, temporal_fill="zeros")
         else:
             self.residual = CoTemporalConvolution(
                 in_channels,
                 out_channels,
                 kernel_size=1,
-                stride=stride,
-                extra_delay=self.tcn.t_conv.delay,
+                stride=self.stride,
+                extra_delay=self.tcn.t_conv.delay // self.stride,
             )
 
     def forward(self, x):
         z = self.tcn(self.gcn(x))
+        r = self.residual(x)
         if z is None:  # In the strided case, ConvCo2d may return None
             return None
-        r = self.residual(x)
         return self.relu(z + r)
 
     @property

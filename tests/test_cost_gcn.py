@@ -2,6 +2,7 @@ import torch
 from models.cost_gcn.cost_gcn import CoStGcn, CoStGcnBlock, CoTemporalConvolution
 from models.st_gcn.st_gcn import StGcnBlock, TemporalConvolution
 from datasets import ntu_rgbd
+import numpy as np
 
 
 def default_hparams():
@@ -205,7 +206,7 @@ def test_CoStGcnBlock_residual_neq_channels():
 def test_CoStGcnBlock_residual_neq_channels_strided():
     # Prepare data
     in_channels = 2
-    out_channels = 4
+    out_channels = 2
     A = ntu_rgbd.graph.A
     T = 20
     B = 2
@@ -237,7 +238,7 @@ def test_CoStGcnBlock_residual_neq_channels_strided():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + co.delay],
+            output[t * 2 + co.delay],
             atol=5e-7,
         )
         for t in range(reg.tcn.pad // stride, (T - co.tcn.pad) // stride)
@@ -248,7 +249,7 @@ def test_CoStGcnBlock_residual_neq_channels_strided():
 
 def test_simple_stgcn():
     # Prepare data
-    T = 30
+    T = 40
     B = 2
     in_channels = 2
     out_channels = 4
@@ -256,7 +257,7 @@ def test_simple_stgcn():
     A = ntu_rgbd.graph.A
     sample = torch.rand((B, in_channels, T, num_nodes))
 
-    stride = 1
+    stride = 2
 
     reg = torch.nn.Sequential(
         StGcnBlock(in_channels, in_channels, A, residual=False),
@@ -268,8 +269,11 @@ def test_simple_stgcn():
         CoStGcnBlock(in_channels, in_channels, A),
         CoStGcnBlock(in_channels, out_channels, A, stride=stride),
     )
+    total_stride = np.prod([block.stride for block in co])
     co_delay = sum([block.delay for block in co if hasattr(block, "delay")])
-    co_pads = sum([block.tcn.pad for block in co if hasattr(block, "tcn")])
+    co_pads = (
+        sum([block.tcn.pad for block in co if hasattr(block, "tcn")]) // total_stride
+    )
 
     #  Transfer weights
     state_dict = reg.state_dict()
@@ -290,10 +294,10 @@ def test_simple_stgcn():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + co_delay],
+            output[t * stride + co_delay],
             atol=5e-7,
         )
-        for t in range(co_pads, T - co_delay)
+        for t in range(co_pads, (T - co_delay) // stride)
     ]
 
     assert all(checks)
