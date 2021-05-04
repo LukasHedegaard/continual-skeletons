@@ -17,7 +17,7 @@ Research repository for Continual Spatio-Temporal Graph Convolutional Neural Net
     ```
 - (Optionally) create conda environment:
     ```bash
-    conda create --name co-stgcn python=3.8
+    conda create --name cost-gcn python=3.8
     ```
 - Install as editable module
     ```bash
