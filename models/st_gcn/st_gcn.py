@@ -144,6 +144,14 @@ class TemporalConvolution(nn.Module):
         return x
 
 
+def zero(x):
+    return 0
+
+
+def unity(x):
+    return x
+
+
 class StGcnBlock(nn.Module):
     def __init__(self, in_channels, out_channels, A, stride=1, residual=True):
         super(StGcnBlock, self).__init__()
@@ -152,9 +160,9 @@ class StGcnBlock(nn.Module):
         self.tcn = TemporalConvolution(out_channels, out_channels, stride=stride)
         self.relu = nn.ReLU()
         if not residual:
-            self.residual = lambda x: 0
+            self.residual = zero
         elif (in_channels == out_channels) and (stride == 1):
-            self.residual = lambda x: x
+            self.residual = unity
         else:
             self.residual = TemporalConvolution(
                 in_channels, out_channels, kernel_size=1, stride=stride
