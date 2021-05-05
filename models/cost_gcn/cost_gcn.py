@@ -17,6 +17,7 @@ class CoStGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
     ride.SgdOneCycleOptimizer,
+    ride.finetune.Finetunable,
     datasets.GraphDatasets,
 ):
     @staticmethod

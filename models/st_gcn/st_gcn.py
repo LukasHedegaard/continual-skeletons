@@ -16,6 +16,7 @@ class StGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
     ride.SgdOneCycleOptimizer,
+    ride.finetune.Finetunable,
     datasets.GraphDatasets,
 ):
     @staticmethod
@@ -78,7 +79,8 @@ class StGcn(
         c_new = x.size(1)
         x = x.view(N, M, c_new, -1)
         x = x.mean(3).mean(1)
-        return self.fc(x)
+        x = self.fc(x)
+        return x
 
 
 class GraphConvolution(nn.Module):
@@ -86,7 +88,9 @@ class GraphConvolution(nn.Module):
         super(GraphConvolution, self).__init__()
         self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
         nn.init.constant_(self.graph_attn, 1)
-        self.A = Variable(torch.from_numpy(A.astype(np.float32)), requires_grad=False)
+        self.A = nn.Parameter(
+            torch.from_numpy(A.astype(np.float32)), requires_grad=False
+        )
         self.num_subset = 3
         self.g_conv = nn.ModuleList()
         for i in range(self.num_subset):
