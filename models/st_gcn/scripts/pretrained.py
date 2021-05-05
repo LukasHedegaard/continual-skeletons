@@ -13,8 +13,8 @@ GPUS = "0,"
 LOGGING_BACKEND = "wandb"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
-DS_SUBSET = "xsub"
-MODALITY = "bone"
+DS_SUBSET = "xview"
+MODALITY = "joint"
 
 
 subprocess.call(
@@ -24,6 +24,13 @@ subprocess.call(
         "--gpus",
         GPUS,
         "--test",
+        "--profile_model",
+        "--batch_size",
+        "128",
+        "--num_workers",
+        "8",
+        "--dataset_normalization",
+        "0",
         "--dataset_name",
         DS_NAME,
         "--dataset_classes",
@@ -42,5 +49,6 @@ subprocess.call(
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
         str(ROOT_PATH / "pretrained_models" / "stgcn_nturgbd-49-29400.pt"),
+        # "--help",
     ]
 )
