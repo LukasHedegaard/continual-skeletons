@@ -6,11 +6,10 @@ import ride  # isort:skip
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 
 from datasets import datasets
 from models.utils import init_weights
-from .continual import AdaptiveAvgPoolCo2d, ConvCo2d, unsqueezed, Delay
+from models.cost_gcn.continual import AdaptiveAvgPoolCo2d, ConvCo2d, unsqueezed, Delay
 
 
 class CoStGcn(
@@ -23,6 +22,14 @@ class CoStGcn(
     @staticmethod
     def configs() -> ride.Configs:
         c = ride.Configs()
+        c.add(
+            name="forward_mode",
+            type=str,
+            default="clip",
+            choices=["clip", "frame"],
+            strategy="choice",
+            description="Run forward on a whole clip or a single frame.",
+        )
         c.add(
             name="continual_temporal_fill",
             type=str,
@@ -52,9 +59,6 @@ class CoStGcn(
         # Shapes from Dataset:
         (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
         num_classes = self.num_classes
-
-        # Remove temporal dimension from input_shape - samples are passed one time instant at a time
-        self.input_shape = (num_channels, num_vertices, num_skeletons)
 
         A = self.graph.A
 
@@ -88,6 +92,26 @@ class CoStGcn(
         init_weights(self.fc, bs=num_classes)
 
     def forward(self, x):
+        result = None
+        if self.hparams.forward_mode == "clip":
+            result = self.forward_clip(x)
+        elif self.hparams.forward_mode == "frame":
+            result = self.forward_frame(x[:, :, 0])
+        else:
+            raise RuntimeError("Model forward_mode should be one of {'clip', 'frame'}.")
+        return result
+
+    def forward_clip(self, x):
+        """Forward clip.
+        Initialise network with first frames and predict on the last
+        """
+        result = None
+        N, C, T, V, M = x.size()
+        for t in range(T):
+            result = self.forward_frame(x[:, :, t])
+        return result
+
+    def forward_frame(self, x):
         N, C, V, M = x.size()
         x = x.permute(0, 3, 2, 1).contiguous().view(N, M * V * C, 1)
         x = self.data_bn(x)
