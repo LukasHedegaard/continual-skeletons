@@ -7,7 +7,7 @@ from pytorch_lightning.utilities.parsing import AttributeDict
 from ride.core import RideClassificationDataset
 from torch.utils.data import DataLoader, Dataset
 
-from datasets import ntu_rgbd, tools
+from datasets import ntu_rgbd, kinetics, tools
 
 
 class GraphDatasets(RideClassificationDataset):
@@ -17,8 +17,8 @@ class GraphDatasets(RideClassificationDataset):
         c.add(
             name="dataset_name",
             type=str,
-            default="ntu_rgbd",
-            choices=["ntu_rgbd", "kinetics", "dummy"],
+            default="dummy",
+            choices=["ntu", "kinetics", "dummy"],
             description="Name of dataset",
         )
         c.add(
@@ -27,7 +27,7 @@ class GraphDatasets(RideClassificationDataset):
             default=0,
             choices=[0, 1],
             strategy="choice",
-            description="Randomly choose a portion of the input sequence during training",
+            description="Randomly choose a portion of the input sequence during training.",
         )
         c.add(
             name="dataset_random_shift",
@@ -35,7 +35,7 @@ class GraphDatasets(RideClassificationDataset):
             default=0,
             choices=[0, 1],
             strategy="choice",
-            description="Randomly pad zeros at the begining or end of sequence during training",
+            description="Randomly pad zeros at the begining or end of sequence during training.",
         )
         c.add(
             name="dataset_random_move",
@@ -43,7 +43,7 @@ class GraphDatasets(RideClassificationDataset):
             default=0,
             choices=[0, 1],
             strategy="choice",
-            description="Randomly move joints during training",
+            description="Randomly move joints during training.",
         )
         c.add(
             name="dataset_normalization",
@@ -51,7 +51,7 @@ class GraphDatasets(RideClassificationDataset):
             default=0,
             choices=[0, 1],
             strategy="choice",
-            description="Normalize input sequence",
+            description="Normalize input sequence.",
         )
         c.add(
             name="dataset_window_size",
@@ -60,22 +60,83 @@ class GraphDatasets(RideClassificationDataset):
             strategy="constant",
             description=(
                 "The length of the output sequence. "
-                "If insufficient frames are available, zero padding is used"
+                "If insufficient frames are available, zero padding is used."
             ),
+        )
+        c.add(
+            name="dataset_classes",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .yaml list of dataset classes.",
+        )
+        c.add(
+            name="dataset_input_channels",
+            type=int,
+            default=3,
+            strategy="constant",
+            description="Number of input channels in dataset.",
+        )
+        c.add(
+            name="dataset_train_data",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .npy training data.",
+        )
+        c.add(
+            name="dataset_val_data",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .npy val data.",
+        )
+        c.add(
+            name="dataset_test_data",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .npy test data. If none is supplied, `dataset_val_data` is used.",
+        )
+        c.add(
+            name="dataset_train_labels",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .pkl train labels.",
+        )
+        c.add(
+            name="dataset_val_labels",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .pkl val labels.",
+        )
+        c.add(
+            name="dataset_test_labels",
+            type=str,
+            default="",
+            strategy="constant",
+            description="Path to .pkl test labels. If none is supplied, `dataset_val_labels` are used.",
         )
         return c
 
     def __init__(self, hparams: AttributeDict):
         super().__init__(hparams)
 
-        (self.output_shape, self.input_shape, self.classes, self.graph) = {
-            "dummy": (
-                (3,),
-                (4, 300, ntu_rgbd.NUM_NODES, 2),
-                ["0", "1", "2"],
-                ntu_rgbd.graph,
-            )
+        C_in = self.hparams.dataset_input_channels
+        (self.output_shape, self.input_shape, self.graph) = {
+            "dummy": ((3,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
+            "ntu": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
+            "kinetics": ((400,), (C_in, 300, kinetics.NUM_NODES, 2), kinetics.graph),
         }[self.hparams.dataset_name]
+
+        self.classes = (
+            ["0", "1", "2"]
+            if self.hparams.dataset_name == "dummy"
+            else ride.utils.io.load_yaml(self.hparams.dataset_classes)
+        )
+        assert len(self.classes) == self.output_shape[0]
 
         Ds = DummyDataset if self.hparams.dataset_name == "dummy" else GraphDataset
 
@@ -94,15 +155,31 @@ class GraphDatasets(RideClassificationDataset):
         )
 
         self._train_dataloader = DataLoader(
-            dataset=Ds(data_path="", label_path="", **train_args),
+            dataset=Ds(
+                data_path=self.hparams.dataset_train_data,
+                label_path=self.hparams.dataset_train_labels,
+                **train_args
+            ),
             shuffle=True,
             **dataloader_args
         )
         self._val_dataloader = DataLoader(
-            dataset=Ds(data_path="", label_path=""), shuffle=False, **dataloader_args
+            dataset=Ds(
+                data_path=self.hparams.dataset_val_data,
+                label_path=self.hparams.dataset_val_labels,
+            ),
+            shuffle=False,
+            **dataloader_args
         )
         self._test_dataloader = DataLoader(
-            Ds(data_path="", label_path=""), shuffle=False, **dataloader_args
+            Ds(
+                data_path=self.hparams.dataset_test_data
+                or self.hparams.dataset_val_data,
+                label_path=self.hparams.dataset_test_labels
+                or self.hparams.dataset_val_labels,
+            ),
+            shuffle=False,
+            **dataloader_args
         )
 
     def train_dataloader(self) -> DataLoader:
@@ -210,12 +287,7 @@ class DummyDataset(Dataset):
         *args,
         **kwargs
     ):
-        # (
-        #     num_channels,
-        #     num_frames,
-        #     num_vertices,
-        #     num_skeletons,
-        # ) = self.input_shape
+        # num_channels, num_frames, num_vertices, num_skeletons = self.input_shape
         self.input_shape = input_shape
         self.output_shape = (num_classes,)
         self.data = torch.rand(size=(num_samples, *input_shape), dtype=torch.float32)
