@@ -6,7 +6,6 @@ import ride  # isort:skip
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 
 from datasets import datasets
 from models.utils import init_weights
