@@ -21,6 +21,8 @@ for pool_size in [1, 5, 10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 100, 150]:
         [
             "python3",
             "models/cost_gcn/cost_gcn.py",
+            "--id",
+            "pool_size",
             "--gpus",
             GPUS,
             "--forward_mode",
