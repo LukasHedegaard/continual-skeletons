@@ -2,7 +2,17 @@ from enum import Enum
 from torch import Tensor
 from torch.nn import Module
 from functools import wraps
-from typing import Callable
+from typing import Callable, Tuple
+
+
+class TensorPlaceholder:
+    shape: Tuple[int]
+
+    def __init__(self, shape: Tuple[int]):
+        self.shape = shape
+
+    def size(self):
+        return self.shape
 
 
 class FillMode(Enum):
