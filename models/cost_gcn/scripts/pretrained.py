@@ -9,7 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "0,"
+GPUS = "1"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
 DS_SUBSET = "xview"
@@ -48,26 +48,32 @@ subprocess.call(
         "--dataset_test_labels",
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
-        str(ROOT_PATH / "pretrained_models" / "stgcn_nturgbd-49-29400.pt"),
+        str(
+            ROOT_PATH
+            / "pretrained_models"
+            / "stgcn"
+            / "nturgbd_cv"
+            / "ntu_cv_stgcn_joint-49-29400.pt"
+        ),
         "--logging_backend",
         "wandb",
+        # "--limit_test_batches",
+        # "3",
     ]
 )
 
-# subprocess.call(
-#     [
-#         "python3",
-#         "models/cost_gcn/cost_gcn.py",
-#         "--profile_model",
-#         "--forward_mode",
-#         "frame",
-#         "--gpus",
-#         "0",
-#         "--batch_size",
-#         "1",
-#         "--num_workers",
-#         "1",
-#         "--dataset_name",
-#         "dummy",
-#     ]
-# )
+subprocess.call(
+    [
+        "python3",
+        "models/cost_gcn/cost_gcn.py",
+        "--profile_model",
+        "--gpus",
+        "0",
+        "--batch_size",
+        "1",
+        "--num_workers",
+        "1",
+        "--dataset_name",
+        "dummy",
+    ]
+)
