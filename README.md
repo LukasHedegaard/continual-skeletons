@@ -12,8 +12,8 @@ Research repository for Continual Spatio-Temporal Graph Convolutional Neural Net
 ### Installation
 - Clone this repository and enter it: 
     ```bash
-    git clone https://github.com/LukasHedegaard/co-stgcn.git
-    cd co-stgcn
+    git clone https://github.com/LukasHedegaard/cost-gcn.git
+    cd cost-gcn
     ```
 - (Optionally) create conda environment:
     ```bash
