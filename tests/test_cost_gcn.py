@@ -1,6 +1,6 @@
 import torch
 from models.cost_gcn.cost_gcn import CoStGcn, CoStGcnBlock, CoTemporalConvolution
-from models.st_gcn.st_gcn import StGcnBlock, TemporalConvolution
+from models.st_gcn.st_gcn import StGcnBlock, TemporalConvolution, StGcn
 from datasets import ntu_rgbd
 import numpy as np
 
@@ -251,7 +251,7 @@ def test_simple_costgcn():
     # Prepare data
     T = 40
     B = 2
-    in_channels = 2
+    in_channels = 3
     out_channels = 4
     num_nodes = ntu_rgbd.graph.A.shape[-1]
     A = ntu_rgbd.graph.A
@@ -298,6 +298,59 @@ def test_simple_costgcn():
             atol=5e-6,
         )
         for t in range(co_pads, (T - co_delay) // stride)
+    ]
+
+    assert all(checks)
+
+
+def test_costgcn_until_pool():
+    # Model definition
+    hparams = default_hparams()
+    hparams["dataset_name"] = "dummy"
+    reg = StGcn(hparams)
+    co = CoStGcn(hparams)
+
+    #  Transfer weights
+    co.load_state_dict(reg.state_dict())
+
+    # Set to eval mode (otherwise batchnorm doesn't match)
+    reg.eval()
+    co.eval()
+
+    # Register forward hook
+    reg_features = []
+    co_features = []
+
+    def reg_store_features(sself, input, output):
+        nonlocal reg_features
+        reg_features = output
+
+    def co_store_features(sself, input, output):
+        nonlocal co_features
+        co_features.append(output)
+
+    reg.layers.layer10.register_forward_hook(reg_store_features)
+    co.layers.layer10.register_forward_hook(co_store_features)
+
+    # Prepare sample
+    sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
+
+    # Forward
+    reg(sample)
+    co(sample)
+
+    # (4 * 5 / 2 + 3 * 4) / 2 + 2 * 4 = 19
+    delay = 0
+    for i in range(len(co.layers)):
+        delay += co.layers[f"layer{i + 1}"].delay
+        delay = delay // co.layers[f"layer{i + 1}"].stride
+
+    # Match for reg =----=
+    #           co  ==----
+    # where '=' is delay
+    checks = [
+        torch.allclose(reg_features[:, :, i], co_features[i + delay], atol=5e-5)
+        for i in range(delay, len(co_features) - delay)
     ]
 
     assert all(checks)
