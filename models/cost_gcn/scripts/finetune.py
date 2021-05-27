@@ -9,7 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
+GPUS = "2"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
 DS_SUBSET = "xview"
@@ -20,13 +20,20 @@ subprocess.call(
     [
         "python3",
         "models/cost_gcn/cost_gcn.py",
+        "--id",
+        "finetune",
         "--gpus",
         GPUS,
         "--forward_mode",
         "clip",
+        "--train",
+        "--max_epochs",
+        "4",
+        "--optimization_metric",
+        "top1acc",
         "--test",
         "--batch_size",
-        "128",
+        "20",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -52,28 +59,28 @@ subprocess.call(
             ROOT_PATH
             / "pretrained_models"
             / "stgcn"
-            / "nturgbd_cv"
+            / "nturgbd60_cv"
             / "ntu_cv_stgcn_joint-49-29400.pt"
         ),
         "--logging_backend",
         "wandb",
-        # "--limit_test_batches",
-        # "3",
-    ]
-)
-
-subprocess.call(
-    [
-        "python3",
-        "models/cost_gcn/cost_gcn.py",
-        "--profile_model",
-        "--gpus",
+        "--pool_size",
+        "55",
+        "--unfreeze_from_epoch",
         "0",
-        "--batch_size",
+        "--unfreeze_layers_initial",
         "1",
-        "--num_workers",
+        "--unfreeze_layers_max",
         "1",
-        "--dataset_name",
-        "dummy",
+        "--learning_rate",
+        "0.002",
+        "--weight_decay",
+        "0.0001",
+        "--distributed_backend",
+        "ddp",
+        # "--auto_lr_find",
+        # "learning_rate",
+        # "--auto_scale_batch_size",
+        # "power",
     ]
 )

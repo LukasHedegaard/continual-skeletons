@@ -9,8 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "0,"
-LOGGING_BACKEND = "wandb"
+GPUS = "1"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
 DS_SUBSET = "xview"
@@ -20,13 +19,14 @@ MODALITY = "joint"
 subprocess.call(
     [
         "python3",
-        "models/st_gcn/st_gcn.py",
+        "models/cost_gcn/cost_gcn.py",
         "--id",
-        "pretrained",
+        "weighted_pool",
         "--gpus",
         GPUS,
+        "--forward_mode",
+        "clip",
         "--test",
-        "--profile_model",
         "--batch_size",
         "128",
         "--num_workers",
@@ -59,6 +59,25 @@ subprocess.call(
         ),
         "--logging_backend",
         "wandb",
-        # "--help",
+        "--pool_size",
+        "56",
+        # "--limit_test_batches",
+        # "3",
     ]
 )
+
+# subprocess.call(
+#     [
+#         "python3",
+#         "models/cost_gcn/cost_gcn.py",
+#         "--profile_model",
+#         "--gpus",
+#         "0",
+#         "--batch_size",
+#         "1",
+#         "--num_workers",
+#         "1",
+#         "--dataset_name",
+#         "dummy",
+#     ]
+# )

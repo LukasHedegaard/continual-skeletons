@@ -21,8 +21,7 @@ from models.cost_gcn.continual import (
 class CoStGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.SgdOneCycleOptimizer,
-    ride.finetune.Finetunable,
+    ride.optimizers.SgdOptimizer,
     datasets.GraphDatasets,
 ):
     @staticmethod
@@ -35,6 +34,13 @@ class CoStGcn(
             choices=["clip", "frame"],
             strategy="choice",
             description="Run forward on a whole clip or a single frame.",
+        )
+        c.add(
+            name="predict_after_frames",
+            type=int,
+            default=0,
+            strategy="choice",
+            description="Predict the final results after N frames.",
         )
         c.add(
             name="continual_temporal_fill",
@@ -86,10 +92,13 @@ class CoStGcn(
         )
         self.pool_size = hparams.pool_size
         if self.pool_size == -1:
+            # Heuristic choice of pool size:
+            # For a regular temporal convolution with padding, both ends are influenced by zero padding: ==-----==
+            # Choose a pool-size corresponding to the center-part, which zero-padding did not influence:   -----
             st_gcn_delay = sum(
                 [self.layers[f"layer{i + 1}"].delay for i in range(len(self.layers))]
             )
-            self.pool_size = (num_frames - st_gcn_delay) // self.stride
+            self.pool_size = (num_frames - 2 * st_gcn_delay) // self.stride
         self.pool = AdaptiveAvgPoolCo2d(window_size=self.pool_size, output_size=(1,))
         self.fc = nn.Linear(256, num_classes)
 
@@ -120,7 +129,7 @@ class CoStGcn(
         self.clean_states()
         result = None
         N, C, T, V, M = x.shape
-        for t in range(T):
+        for t in range(self.hparams.predict_after_frames or T):
             result = self.forward_frame(x[:, :, t])
         return result
 
