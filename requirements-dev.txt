@@ -11,3 +11,4 @@ ipywidgets
 pandas
 matplotlib
 seaborn
+plotly
