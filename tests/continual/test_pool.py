@@ -1,6 +1,6 @@
 import torch
 from torch.nn import AvgPool1d, AdaptiveAvgPool2d
-from models.cost_gcn.continual import AvgPoolCo1d, AdaptiveAvgPoolCo2d
+from continual import AvgPoolCo1d, AdaptiveAvgPoolCo2d
 
 
 def test_AvgPoolCo1d():

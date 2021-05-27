@@ -21,7 +21,7 @@ subprocess.call(
         "python3",
         "models/cost_gcn/cost_gcn.py",
         "--id",
-        "weighted_pool",
+        "evaluate",
         "--gpus",
         GPUS,
         "--forward_mode",
@@ -61,8 +61,6 @@ subprocess.call(
         "wandb",
         "--pool_size",
         "56",
-        # "--limit_test_batches",
-        # "3",
     ]
 )
 

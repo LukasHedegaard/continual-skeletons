@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from datasets import datasets
 from models.utils import init_weights
-from models.cost_gcn.continual import (
+from continual import (
     AdaptiveAvgPoolCo2d,
     ConvCo2d,
     unsqueezed,

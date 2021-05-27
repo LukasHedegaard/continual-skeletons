@@ -1,6 +1,6 @@
 import torch
 
-from models.cost_gcn.continual.delay import Delay
+from continual.delay import Delay
 
 torch.manual_seed(42)
 
