@@ -104,8 +104,6 @@ class CoStGcn(
             # A new output is created every `self.stride` frames.
             self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
 
-        self.count = 0  # TODO: Remove
-
     def forward(self, x):
         result = None
         if self.hparams.forward_mode == "clip":
@@ -144,7 +142,6 @@ class CoStGcn(
         x = x.view(N, M, C_new).mean(1)
         x = self.fc(x)
         self.last_output = x
-        self.count += 1
         return x
 
     def clean_states(self):
