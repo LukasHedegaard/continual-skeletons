@@ -1,3 +1,4 @@
+from models.cost_gcn.continual.utils import TensorPlaceholder
 import torch
 from torch.nn import Conv1d, Conv2d
 from models.cost_gcn.continual import ConvCo1d, ConvCo2d
@@ -54,7 +55,7 @@ def test_ConvCo1d_stride():
         if t % S == 0:
             assert torch.allclose(target[:, :, t // S], output[t + (T - 1)])
         else:
-            assert output[t + (T - 1)] is None
+            assert type(output[t + (T - 1)]) is TensorPlaceholder
 
     # Whole time-series
     output = co_conv.forward_regular(sample)
@@ -118,7 +119,7 @@ def test_ConvCo2d_stride():
         if t % S == 0:
             assert torch.allclose(target[:, :, t // stride], output[t + (T - 1)])
         else:
-            assert output[t + (T - 1)] is None
+            assert type(output[t + (T - 1)]) is TensorPlaceholder
 
     # Whole time-series
     output = co_conv.forward_regular(sample)

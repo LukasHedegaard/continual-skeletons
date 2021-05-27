@@ -9,7 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "0,"
+GPUS = "2"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
 DS_SUBSET = "xview"
@@ -20,13 +20,20 @@ subprocess.call(
     [
         "python3",
         "models/cost_gcn/cost_gcn.py",
+        "--id",
+        "finetune",
         "--gpus",
         GPUS,
         "--forward_mode",
         "clip",
+        "--train",
+        "--max_epochs",
+        "4",
+        "--optimization_metric",
+        "top1acc",
         "--test",
         "--batch_size",
-        "128",
+        "20",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -48,26 +55,32 @@ subprocess.call(
         "--dataset_test_labels",
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
-        str(ROOT_PATH / "pretrained_models" / "stgcn_nturgbd-49-29400.pt"),
+        str(
+            ROOT_PATH
+            / "pretrained_models"
+            / "stgcn"
+            / "nturgbd60_cv"
+            / "ntu_cv_stgcn_joint-49-29400.pt"
+        ),
         "--logging_backend",
         "wandb",
+        "--pool_size",
+        "55",
+        "--unfreeze_from_epoch",
+        "0",
+        "--unfreeze_layers_initial",
+        "1",
+        "--unfreeze_layers_max",
+        "1",
+        "--learning_rate",
+        "0.002",
+        "--weight_decay",
+        "0.0001",
+        "--distributed_backend",
+        "ddp",
+        # "--auto_lr_find",
+        # "learning_rate",
+        # "--auto_scale_batch_size",
+        # "power",
     ]
 )
-
-# subprocess.call(
-#     [
-#         "python3",
-#         "models/cost_gcn/cost_gcn.py",
-#         "--profile_model",
-#         "--forward_mode",
-#         "frame",
-#         "--gpus",
-#         "0",
-#         "--batch_size",
-#         "1",
-#         "--num_workers",
-#         "1",
-#         "--dataset_name",
-#         "dummy",
-#     ]
-# )

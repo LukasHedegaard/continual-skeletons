@@ -9,14 +9,19 @@ import torch.nn as nn
 
 from datasets import datasets
 from models.utils import init_weights
-from models.cost_gcn.continual import AdaptiveAvgPoolCo2d, ConvCo2d, unsqueezed, Delay
+from models.cost_gcn.continual import (
+    AdaptiveAvgPoolCo2d,
+    ConvCo2d,
+    unsqueezed,
+    Delay,
+    TensorPlaceholder,
+)
 
 
 class CoStGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.SgdOneCycleOptimizer,
-    ride.finetune.Finetunable,
+    ride.optimizers.SgdOptimizer,
     datasets.GraphDatasets,
 ):
     @staticmethod
@@ -29,6 +34,13 @@ class CoStGcn(
             choices=["clip", "frame"],
             strategy="choice",
             description="Run forward on a whole clip or a single frame.",
+        )
+        c.add(
+            name="predict_after_frames",
+            type=int,
+            default=0,
+            strategy="choice",
+            description="Predict the final results after N frames.",
         )
         c.add(
             name="continual_temporal_fill",
@@ -88,6 +100,12 @@ class CoStGcn(
         init_weights(self.data_bn, bs=1)
         init_weights(self.fc, bs=num_classes)
 
+        if getattr(self.hparams, "profile_model", False):
+            # A new output is created every `self.stride` frames.
+            self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
+
+        self.count = 0  # TODO: Remove
+
     def forward(self, x):
         result = None
         if self.hparams.forward_mode == "clip":
@@ -102,20 +120,23 @@ class CoStGcn(
         """Forward clip.
         Initialise network with first frames and predict on the last
         """
+        self.clean_states()
         result = None
-        N, C, T, V, M = x.size()
-        for t in range(T):
+        N, C, T, V, M = x.shape
+        for t in range(self.hparams.predict_after_frames or T):
             result = self.forward_frame(x[:, :, t])
         return result
 
     def forward_frame(self, x):
-        N, C, V, M = x.size()
+        self.clean_states_on_shape_change(x.shape)
+        N, C, V, M = x.shape
         x = x.permute(0, 3, 2, 1).contiguous().view(N, M * V * C, 1)
         x = self.data_bn(x)
         x = x.view(N, M, V, C).permute(0, 1, 3, 2).contiguous().view(N * M, C, V)
         for i in range(len(self.layers)):
             x = self.layers[f"layer{i + 1}"](x)
-            if x is None:
+            if type(x) is TensorPlaceholder:
+                # if x is None:
                 return self.last_output
         # N*M,C,V
         C_new = x.size(1)
@@ -123,7 +144,20 @@ class CoStGcn(
         x = x.view(N, M, C_new).mean(1)
         x = self.fc(x)
         self.last_output = x
+        self.count += 1
         return x
+
+    def clean_states(self):
+        for m in self.modules():
+            if hasattr(m, "clean_state"):
+                m.clean_state()
+
+    def clean_states_on_shape_change(self, shape):
+        if not hasattr(self, "_current_input_shape"):
+            self._current_input_shape = shape
+
+        if self._current_input_shape != shape:
+            self.clean_states()
 
     @property
     def delay(self):
@@ -139,8 +173,10 @@ class CoStGcn(
 
     @property
     def stride(self):
-        s = np.prod(
-            [self.layers[f"layer{i + 1}"].stride for i in range(len(self.layers))]
+        s = int(
+            np.prod(
+                [self.layers[f"layer{i + 1}"].stride for i in range(len(self.layers))]
+            )
         )
         return s
 
@@ -212,7 +248,8 @@ class CoTemporalConvolution(nn.Module):
 
     def forward(self, x):
         x = self.t_conv(x)
-        if x is None:  # Support strided conv
+        # if x is None:
+        if type(x) is TensorPlaceholder:  # Support strided conv
             return x
         x = self.bn(x)
         if hasattr(self, "extra_delay"):
@@ -248,10 +285,12 @@ class CoStGcnBlock(nn.Module):
             )
 
     def forward(self, x):
+        if type(x) != torch.Tensor:
+            print("hey")
         z = self.tcn(self.gcn(x))
         r = self.residual(x)
-        if z is None:  # In the strided case, ConvCo2d may return None
-            return None
+        if type(z) is TensorPlaceholder:
+            return TensorPlaceholder(z.shape)
         return self.relu(z + r)
 
     @property

@@ -10,7 +10,7 @@ from torch.nn.modules.conv import (
     _size_2_t,
     _pair,
 )
-from .utils import FillMode
+from .utils import FillMode, TensorPlaceholder
 from ride.utils.logging import getLogger
 
 
@@ -215,7 +215,7 @@ class ConvCo1d(_ConvNd):
             if self.bias is not None:
                 x_out += self.bias[None, :]
         else:
-            x_out = None
+            x_out = TensorPlaceholder(x_out.shape)
 
         # Update next state
         next_buffer = buffer.clone() if self.training else buffer.detach()
@@ -242,7 +242,7 @@ class ConvCo1d(_ConvNd):
             o, (self.state_buffer, self.state_index, self.stride_index) = self._forward(
                 i, self.get_state()
             )
-            if self.kernel_size[0] - 1 <= t and o is not None:
+            if self.kernel_size[0] - 1 <= t and type(o) is not TensorPlaceholder:
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -474,7 +474,7 @@ class ConvCo2d(_ConvNd):
             if self.bias is not None:
                 x_out += self.bias[None, :, None]
         else:
-            x_out = None
+            x_out = TensorPlaceholder(x_out.shape)
 
         # Update next state
         if self.kernel_size[0] > 1:
@@ -505,7 +505,7 @@ class ConvCo2d(_ConvNd):
             o, (self.state_buffer, self.state_index, self.stride_index) = self._forward(
                 i, self.get_state()
             )
-            if self.kernel_size[0] - 1 <= t and o is not None:
+            if self.kernel_size[0] - 1 <= t and type(o) is not TensorPlaceholder:
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -514,7 +514,7 @@ class ConvCo2d(_ConvNd):
             o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward(
                 i, (tmp_buffer, tmp_index, tmp_stride_index)
             )
-            if o:
+            if type(o) is not TensorPlaceholder:
                 outs.append(o)
 
         if len(outs) > 0:
