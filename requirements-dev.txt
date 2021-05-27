@@ -6,3 +6,8 @@ pytest
 pytest-cov
 ray[tune]~=1.2
 wandb
+jupyterlab
+ipywidgets
+pandas
+matplotlib
+seaborn

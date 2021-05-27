@@ -9,8 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "0,"
-LOGGING_BACKEND = "wandb"
+GPUS = "1"
 DS_NAME = "ntu"
 DS_PATH = DATASETS_PATH / DS_NAME
 DS_SUBSET = "xview"
@@ -22,11 +21,12 @@ subprocess.call(
         "python3",
         "models/st_gcn/st_gcn.py",
         "--id",
-        "pretrained",
+        "feature_extraction",
         "--gpus",
         GPUS,
         "--test",
-        "--profile_model",
+        "--extract_features_after_layer",
+        "layers.layer10",
         "--batch_size",
         "128",
         "--num_workers",
@@ -57,8 +57,10 @@ subprocess.call(
             / "nturgbd60_cv"
             / "ntu_cv_stgcn_joint-49-29400.pt"
         ),
-        "--logging_backend",
-        "wandb",
+        # "--logging_backend",
+        # "wandb",
+        "--limit_test_batches",
+        "1"
         # "--help",
     ]
 )
