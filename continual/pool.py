@@ -263,7 +263,7 @@ def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
             pooled_window = x
 
             new_index = (index + 1) % self.window_size
-            new_buffer = buffer.clone() if self.training else buffer.detach()
+            new_buffer = buffer  # buffer.clone() if self.training else buffer.detach()
 
             return pooled_window, (new_buffer, new_index)
 

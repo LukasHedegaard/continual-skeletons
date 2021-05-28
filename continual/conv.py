@@ -467,7 +467,7 @@ class ConvCo2d(_ConvNd):
 
         tot = len(buffer)
         if stride_index == 0:
-            x_out = x_out.clone()
+            # x_out = x_out.clone()
             for i in range(tot):
                 x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
@@ -478,7 +478,7 @@ class ConvCo2d(_ConvNd):
 
         # Update next state
         if self.kernel_size[0] > 1:
-            next_buffer = buffer.clone() if self.training else buffer.detach()
+            next_buffer = buffer  # buffer.clone() if self.training else buffer.detach()
             next_buffer[index] = x_rest
             next_index = (index + 1) % tot
         else:
