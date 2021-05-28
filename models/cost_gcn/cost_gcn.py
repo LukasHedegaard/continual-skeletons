@@ -21,7 +21,7 @@ from continual import (
 class CoStGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.optimizers.SgdOptimizer,
+    ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
 ):
     @staticmethod
