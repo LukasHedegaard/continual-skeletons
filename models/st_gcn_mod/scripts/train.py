@@ -37,7 +37,7 @@ subprocess.call(
         "--num_workers",
         "15",
         "--learning_rate",
-        "0.2",
+        "0.02",
         "--weight_decay",
         "0.0001",
         "--dataset_normalization",

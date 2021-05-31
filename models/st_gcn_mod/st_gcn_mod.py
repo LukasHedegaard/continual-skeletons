@@ -14,7 +14,7 @@ from models.utils import init_weights
 class StGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.SgdOneCycleOptimizer,
+    ride.AdamWOneCycleOptimizer,
     ride.finetune.Finetunable,
     datasets.GraphDatasets,
 ):
