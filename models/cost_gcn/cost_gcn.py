@@ -74,20 +74,30 @@ class CoStGcn(
 
         A = self.graph.A
 
+        # BN momentum should match that of clip-based inference
+        # The number of frames is reduced as stride increases
+        bn_mom1 = calc_momentum(num_frames)
+        bn_mom2 = calc_momentum(num_frames // 2)
+        bn_mom3 = calc_momentum(num_frames // (2 * 2))
+
         # Define layers
-        self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
+        self.data_bn = nn.BatchNorm1d(
+            num_skeletons * num_channels * num_vertices, momentum=bn_mom1
+        )
         self.layers = nn.ModuleDict(
             {
-                "layer1": CoStGcnBlock(num_channels, 64, A, residual=False),
-                "layer2": CoStGcnBlock(64, 64, A),
-                "layer3": CoStGcnBlock(64, 64, A),
-                "layer4": CoStGcnBlock(64, 64, A),
-                "layer5": CoStGcnBlock(64, 128, A, stride=2),
-                "layer6": CoStGcnBlock(128, 128, A),
-                "layer7": CoStGcnBlock(128, 128, A),
-                "layer8": CoStGcnBlock(128, 256, A, stride=2),
-                "layer9": CoStGcnBlock(256, 256, A),
-                "layer10": CoStGcnBlock(256, 256, A),
+                "layer1": CoStGcnBlock(
+                    num_channels, 64, A, residual=False, bn_momentum=bn_mom1
+                ),
+                "layer2": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
+                "layer3": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
+                "layer4": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
+                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom1, stride=2),
+                "layer6": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
+                "layer7": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
+                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom2, stride=2),
+                "layer9": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
+                "layer10": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
             }
         )
         self.pool_size = hparams.pool_size
@@ -179,7 +189,7 @@ class CoStGcn(
 
 
 class GraphConvolution(nn.Module):
-    def __init__(self, in_channels, out_channels, A):
+    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1):
         super(GraphConvolution, self).__init__()
         self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
         nn.init.constant_(self.graph_attn, 1)
@@ -194,14 +204,15 @@ class GraphConvolution(nn.Module):
 
         if in_channels != out_channels:
             self.gcn_residual = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 1), nn.BatchNorm2d(out_channels)
+                nn.Conv2d(in_channels, out_channels, 1),
+                nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             )
             init_weights(self.gcn_residual[0], bs=1)
             init_weights(self.gcn_residual[1], bs=1)
         else:
             self.gcn_residual = lambda x: x
 
-        self.bn = nn.BatchNorm2d(out_channels)
+        self.bn = nn.BatchNorm2d(out_channels, momentum=bn_momentum)
         init_weights(self.bn, bs=1e-6)
         self.relu = nn.ReLU()
 
@@ -226,6 +237,7 @@ class CoTemporalConvolution(nn.Module):
         kernel_size=9,
         stride=1,
         extra_delay: int = None,
+        bn_momentum=0.1,
     ):
         super(CoTemporalConvolution, self).__init__()
 
@@ -237,7 +249,7 @@ class CoTemporalConvolution(nn.Module):
             padding=(self.pad, 0),
             stride=(stride, 1),
         )
-        self.bn = nn.BatchNorm1d(out_channels)
+        self.bn = nn.BatchNorm1d(out_channels, momentum=bn_momentum)
         if extra_delay:
             self.extra_delay = Delay(extra_delay)
         init_weights(self.t_conv, bs=1)
@@ -262,10 +274,14 @@ class CoTemporalConvolution(nn.Module):
 
 
 class CoStGcnBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, A, stride=1, residual=True):
+    def __init__(
+        self, in_channels, out_channels, A, stride=1, residual=True, bn_momentum=0.1
+    ):
         super(CoStGcnBlock, self).__init__()
         self.stride = stride
-        self.gcn = unsqueezed(GraphConvolution(in_channels, out_channels, A))
+        self.gcn = unsqueezed(
+            GraphConvolution(in_channels, out_channels, A, bn_momentum)
+        )
         self.tcn = CoTemporalConvolution(out_channels, out_channels, stride=stride)
         self.relu = nn.ReLU()
         if not residual:
@@ -293,6 +309,10 @@ class CoStGcnBlock(nn.Module):
     @property
     def delay(self):
         return self.tcn.delay
+
+
+def calc_momentum(num_frames: int, base_mom=0.1):
+    return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
 if __name__ == "__main__":  # pragma: no cover
