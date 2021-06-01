@@ -11,7 +11,7 @@ from datasets import datasets
 from models.utils import init_weights
 
 
-class StGcn(
+class StGcnMod(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
     ride.SgdOneCycleOptimizer,
@@ -177,4 +177,4 @@ class StGcnBlock(nn.Module):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    ride.Main(StGcn).argparse()
+    ride.Main(StGcnMod).argparse()
