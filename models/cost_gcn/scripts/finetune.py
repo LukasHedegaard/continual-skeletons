@@ -32,7 +32,7 @@ subprocess.call(
         "top1acc",
         "--test",
         "--batch_size",
-        "20",
+        "22",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -72,7 +72,7 @@ subprocess.call(
         "--unfreeze_layers_max",
         "2",
         "--learning_rate",
-        "0.0003125",  # Apply scaling rule: 0,001 / 64 * 20
+        "0.00034375",  # Apply scaling rule: 0,001 / 64 * 22
         "--weight_decay",
         "0.0001",
     ]
