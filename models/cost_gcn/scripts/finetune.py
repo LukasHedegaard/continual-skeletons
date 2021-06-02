@@ -9,9 +9,8 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "2"
 DS_NAME = "ntu"
-DS_PATH = DATASETS_PATH / DS_NAME
+DS_PATH = DATASETS_PATH / "ntu60"
 DS_SUBSET = "xview"
 MODALITY = "joint"
 
@@ -21,14 +20,14 @@ subprocess.call(
         "python3",
         "models/cost_gcn/cost_gcn.py",
         "--id",
-        "finetune",
+        "finetune_2_last_layers",
         "--gpus",
-        GPUS,
+        "1",
         "--forward_mode",
         "clip",
         "--train",
         "--max_epochs",
-        "4",
+        "10",
         "--optimization_metric",
         "top1acc",
         "--test",
@@ -65,22 +64,16 @@ subprocess.call(
         "--logging_backend",
         "wandb",
         "--pool_size",
-        "55",
+        "56",
         "--unfreeze_from_epoch",
         "0",
         "--unfreeze_layers_initial",
-        "1",
+        "2",
         "--unfreeze_layers_max",
-        "1",
+        "2",
         "--learning_rate",
-        "0.002",
+        "0.0003125",  # Apply scaling rule: 0,001 / 64 * 20
         "--weight_decay",
         "0.0001",
-        "--distributed_backend",
-        "ddp",
-        # "--auto_lr_find",
-        # "learning_rate",
-        # "--auto_scale_batch_size",
-        # "power",
     ]
 )
