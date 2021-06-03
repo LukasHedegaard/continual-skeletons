@@ -22,16 +22,14 @@ subprocess.call(
         "finetune_all_layers",
         "--gpus",
         "1",
-        "--forward_mode",
-        "clip",
         "--train",
         "--max_epochs",
-        "10",
+        "30",
         "--optimization_metric",
         "top1acc",
         "--test",
         "--batch_size",
-        "20",
+        "12",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -67,8 +65,13 @@ subprocess.call(
         "--unfreeze_layers_initial",
         "-1",
         "--learning_rate",
-        "0.0003125",  # Apply scaling rule: 0,001 / 64 * 20
+        "0.0001875",  # Apply scaling rule: 0,001 / 64 * 16
         "--weight_decay",
         "0.0001",
+        "--finetune_from_weights",
+        str(
+            ROOT_PATH
+            / "logs/run_logs/StGcnMod/2nwwtd9w/checkpoints/epoch=8-step=28241.ckpt"
+        ),
     ]
 )
