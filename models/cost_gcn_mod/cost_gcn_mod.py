@@ -4,16 +4,13 @@ Modified based on: https://github.com/open-mmlab/mmskeleton
 import ride  # isort:skip
 
 import numpy as np
-import torch
 import torch.nn as nn
 
 from datasets import datasets
 from models.utils import init_weights
+from models.cost_gcn.cost_gcn import CoStGcnBlock, calc_momentum
 from continual import (
     AdaptiveAvgPoolCo2d,
-    ConvCo2d,
-    unsqueezed,
-    Delay,
     TensorPlaceholder,
 )
 
@@ -187,133 +184,6 @@ class CoStGcnMod(
             )
         )
         return s
-
-
-class GraphConvolution(nn.Module):
-    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1):
-        super(GraphConvolution, self).__init__()
-        self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
-        nn.init.constant_(self.graph_attn, 1)
-        self.A = nn.Parameter(
-            torch.from_numpy(A.astype(np.float32)), requires_grad=False
-        )
-        self.num_subset = 3
-        self.g_conv = nn.ModuleList()
-        for i in range(self.num_subset):
-            self.g_conv.append(nn.Conv2d(in_channels, out_channels, 1))
-            init_weights(self.g_conv[i], bs=self.num_subset)
-
-        if in_channels != out_channels:
-            self.gcn_residual = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 1),
-                nn.BatchNorm2d(out_channels, momentum=bn_momentum),
-            )
-            init_weights(self.gcn_residual[0], bs=1)
-            init_weights(self.gcn_residual[1], bs=1)
-        else:
-            self.gcn_residual = lambda x: x
-
-        self.bn = nn.BatchNorm2d(out_channels, momentum=bn_momentum)
-        init_weights(self.bn, bs=1e-6)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        N, C, T, V = x.size()
-        A = self.A * self.graph_attn
-        hidden_ = None
-        for i in range(self.num_subset):
-            x_a = x.view(N, C * T, V)
-            z = self.g_conv[i](torch.matmul(x_a, A[i]).view(N, C, T, V))
-            hidden_ = z + hidden_ if hidden_ is not None else z
-        hidden_ = self.bn(hidden_)
-        hidden_ += self.gcn_residual(x)
-        return self.relu(hidden_)
-
-
-class CoTemporalConvolution(nn.Module):
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size=9,
-        stride=1,
-        extra_delay: int = None,
-        bn_momentum=0.1,
-    ):
-        super(CoTemporalConvolution, self).__init__()
-
-        self.pad = int((kernel_size - 1) / 2)
-        self.t_conv = ConvCo2d(
-            in_channels,
-            out_channels,
-            kernel_size=(kernel_size, 1),
-            padding=(self.pad, 0),
-            stride=(stride, 1),
-        )
-        self.bn = nn.BatchNorm1d(out_channels, momentum=bn_momentum)
-        if extra_delay:
-            self.extra_delay = Delay(extra_delay)
-        init_weights(self.t_conv, bs=1)
-        init_weights(self.bn, bs=1)
-
-    def forward(self, x):
-        x = self.t_conv(x)
-        # if x is None:
-        if type(x) is TensorPlaceholder:  # Support strided conv
-            return x
-        x = self.bn(x)
-        if hasattr(self, "extra_delay"):
-            x = self.extra_delay(x)
-        return x
-
-    @property
-    def delay(self):
-        d = self.t_conv.delay
-        if hasattr(self, "extra_delay"):
-            d += self.extra_delay.delay
-        return d
-
-
-class CoStGcnBlock(nn.Module):
-    def __init__(
-        self, in_channels, out_channels, A, stride=1, residual=True, bn_momentum=0.1
-    ):
-        super(CoStGcnBlock, self).__init__()
-        self.stride = stride
-        self.gcn = unsqueezed(
-            GraphConvolution(in_channels, out_channels, A, bn_momentum)
-        )
-        self.tcn = CoTemporalConvolution(out_channels, out_channels, stride=stride)
-        self.relu = nn.ReLU()
-        if not residual:
-            self.residual = lambda x: 0
-        elif (in_channels == out_channels) and (self.stride == 1):
-            self.residual = Delay(self.tcn.t_conv.delay, temporal_fill="zeros")
-        else:
-            self.residual = CoTemporalConvolution(
-                in_channels,
-                out_channels,
-                kernel_size=1,
-                stride=self.stride,
-                extra_delay=self.tcn.t_conv.delay // self.stride,
-            )
-
-    def forward(self, x):
-        if type(x) != torch.Tensor:
-            print("hey")
-        z = self.tcn(self.gcn(x))
-        r = self.residual(x)
-        if type(z) is TensorPlaceholder:
-            return TensorPlaceholder(z.shape)
-        return self.relu(z + r)
-
-    @property
-    def delay(self):
-        return self.tcn.delay
-
-
-def calc_momentum(num_frames: int, base_mom=0.1):
-    return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
 if __name__ == "__main__":  # pragma: no cover

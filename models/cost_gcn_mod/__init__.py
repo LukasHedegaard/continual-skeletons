@@ -1,1 +1,1 @@
-from .cost_gcn import CoStGcn  # noqa: F401
+from .cost_gcn_mod import CoStGcnMod  # noqa: F401
