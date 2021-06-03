@@ -24,7 +24,7 @@ subprocess.call(
         "1",
         "--train",
         "--max_epochs",
-        "30",
+        "10",
         "--optimization_metric",
         "top1acc",
         "--test",
@@ -65,13 +65,13 @@ subprocess.call(
         "--unfreeze_layers_initial",
         "-1",
         "--learning_rate",
-        "0.0001875",  # Apply scaling rule: 0,001 / 64 * 16
+        "0.05",  # Double of linear scaling rule: 2 * 0,1 / 64 * 16
         "--weight_decay",
         "0.0001",
         "--finetune_from_weights",
         str(
             ROOT_PATH
-            / "logs/run_logs/StGcnMod/2nwwtd9w/checkpoints/epoch=8-step=28241.ckpt"
+            / "pretrained_models/stgcn/nturgbd60_cv/ntu_cv_stgcn_joint-49-29400.pt"
         ),
     ]
 )
