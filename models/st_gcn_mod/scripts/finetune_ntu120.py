@@ -9,7 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-DS_NAME = "ntu"
+DS_NAME = "ntu120"
 DS_PATH = DATASETS_PATH / "ntu120"
 
 for subset, modality, pretrained_model in [
