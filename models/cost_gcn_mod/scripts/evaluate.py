@@ -25,7 +25,7 @@ for subset, modality, pretrained_model in [
             "python3",
             "models/cost_gcn_mod/cost_gcn_mod.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}_stgcn_mod",
+            f"eval_{DS_NAME}_{subset}_{modality}_stgcn_mod_weights",
             "--gpus",
             GPUS,
             "--forward_mode",
@@ -57,7 +57,7 @@ for subset, modality, pretrained_model in [
             "--finetune_from_weights",
             str(
                 ROOT_PATH
-                / "logs/run_logs/StGcnMod/2nwwtd9w/checkpoints/epoch=8-step=28241.ckpt"
+                / "logs/run_logs/StGcnMod/2y4n0494/checkpoints/epoch=9-step=31379.ckpt"
             ),
             "--logging_backend",
             "wandb",
