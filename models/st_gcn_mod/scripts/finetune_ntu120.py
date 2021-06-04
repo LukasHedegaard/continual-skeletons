@@ -10,16 +10,11 @@ LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
 DS_NAME = "ntu"
-DS_PATH = DATASETS_PATH / "ntu60"
-DS_SUBSET = "xview"
-MODALITY = "joint"
-
-DS_NAME = "ntu"
-DS_PATH = DATASETS_PATH / "ntu60"
+DS_PATH = DATASETS_PATH / "ntu120"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "stgcn/nturgbd60_xview/ntu_cv_stgcn_joint-49-29400.pt"),
-    ("xsub", "joint", "stgcn/nturgbd60_xsub/ntu_cs_stgcn_joint-49-31300.pt"),
+    ("xset", "joint", "stgcn/nturgbd120_xset/ntu120_xset_stgcn_joint-37-32338.pt"),
+    ("xsub", "joint", "stgcn/nturgbd120_xsub/ntu120_xsub_stgcn_joint-31-31488.pt"),
 ]:
     subprocess.call(
         [
