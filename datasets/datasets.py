@@ -18,7 +18,7 @@ class GraphDatasets(RideClassificationDataset):
             name="dataset_name",
             type=str,
             default="dummy",
-            choices=["ntu", "ntu120", "kinetics", "dummy"],
+            choices=["ntu60", "ntu120", "kinetics", "dummy"],
             description="Name of dataset",
         )
         c.add(
@@ -127,7 +127,7 @@ class GraphDatasets(RideClassificationDataset):
         C_in = self.hparams.dataset_input_channels
         (self.output_shape, self.input_shape, self.graph) = {
             "dummy": ((3,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
-            "ntu": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
+            "ntu60": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "ntu120": ((120,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "kinetics": ((400,), (C_in, 300, kinetics.NUM_NODES, 2), kinetics.graph),
         }[self.hparams.dataset_name]
