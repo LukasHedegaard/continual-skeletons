@@ -9,7 +9,7 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-DS_NAME = "ntu"
+DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
@@ -21,7 +21,7 @@ for subset, modality, pretrained_model in [
             "python3",
             "models/st_gcn_mod/st_gcn_mod.py",
             "--id",
-            "finetune_all_layers",
+            f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
             "1",
             "--train",

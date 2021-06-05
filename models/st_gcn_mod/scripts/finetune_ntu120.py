@@ -21,7 +21,7 @@ for subset, modality, pretrained_model in [
             "python3",
             "models/st_gcn_mod/st_gcn_mod.py",
             "--id",
-            "finetune_all_layers",
+            f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
             "1",
             "--train",
