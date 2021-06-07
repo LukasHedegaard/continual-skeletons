@@ -28,7 +28,7 @@ for epoch in [1, 3, 5, 10, 15]:
                 "1",
                 "--train",
                 "--max_epochs",
-                "15",
+                str(epoch),
                 "--optimization_metric",
                 "top1acc",
                 "--test",
@@ -61,7 +61,7 @@ for epoch in [1, 3, 5, 10, 15]:
                 "--unfreeze_layers_initial",
                 "-1",
                 "--learning_rate",
-                "0.03125",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+                "0.03",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
                 "--weight_decay",
                 "0.0001",
                 "--finetune_from_weights",
