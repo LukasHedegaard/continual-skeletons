@@ -187,7 +187,7 @@ class AdaptiveGcnBlock(nn.Module):
         z = self.tcn(self.gcn(x))
         # Centered residuals:
         # Since temporal zero-padding is removed, the feature-map shrinks at every temporal conv
-        # The residual should shrink correspondingly, i.e. int((kernel_size - 1) / 2) = 4 on each side
+        # The residual should shrink correspondingly, i.e. (kernel_size - 1) / 2 = 4 on each side
         r = self.residual(x[:, :, 4:-4])
         return self.relu(z + r)
 

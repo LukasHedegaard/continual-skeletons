@@ -21,7 +21,7 @@ from continual import (
 class CoStGcn(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.optimizers.SgdOptimizer,
+    ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
 ):
     @staticmethod
@@ -92,10 +92,10 @@ class CoStGcn(
                 "layer2": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
                 "layer3": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
                 "layer4": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
-                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom1, stride=2),
+                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom2, stride=2),
                 "layer6": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
                 "layer7": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
-                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom2, stride=2),
+                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom3, stride=2),
                 "layer9": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
                 "layer10": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
             }
