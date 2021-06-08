@@ -98,7 +98,7 @@ class CoStGcnMod(
         if self.pool_size == -1:
             self.pool_size = (
                 num_frames // self.stride
-                - self.delay_stgcn_blocks
+                - self.delay_conv_blocks
                 - 10 * 8  # No padding was used in ST-GCN-mod, hence the layers shrink
             )
         self.pool = AdaptiveAvgPoolCo2d(window_size=self.pool_size, output_size=(1,))
@@ -166,10 +166,10 @@ class CoStGcnMod(
 
     @property
     def delay(self):
-        return self.delay_stgcn_blocks + self.pool.delay
+        return self.delay_conv_blocks + self.pool.delay
 
     @property
-    def delay_stgcn_blocks(self):
+    def delay_conv_blocks(self):
         d = 0
         for i in range(len(self.layers)):
             d += self.layers[f"layer{i + 1}"].delay
