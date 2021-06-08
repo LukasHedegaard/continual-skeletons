@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 from typing import Tuple, Union
 from torch.nn.modules.pooling import (
-    _AvgPoolNd,
+    _AdaptiveAvgPoolNd,
     AdaptiveAvgPool1d,
     AdaptiveMaxPool1d,
     AvgPool1d,
@@ -30,7 +30,7 @@ __all__ = [
 State = Tuple[Tensor, int]
 
 
-class AvgPoolCo1d(_AvgPoolNd):
+class AvgPoolCo1d(torch.nn.Module):
     """
     Continual Average Pool in 1D
 
@@ -56,7 +56,7 @@ class AvgPoolCo1d(_AvgPoolNd):
         self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
-        super(AvgPoolCo1d, self).__init__(*args, **kwargs)
+        torch.nn.Module.__init__(self)
 
         self.temporal_pool = AdaptiveAvgPool1d(1)
 

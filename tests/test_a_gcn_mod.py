@@ -31,4 +31,4 @@ def test_AGcnMod():
     o_reg = reg(sample)
     o_co = co(sample)
 
-    assert torch.allclose(o_reg, o_co)
+    assert torch.allclose(o_reg, o_co, rtol=1e-4)
