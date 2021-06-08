@@ -1,6 +1,12 @@
 import torch
-from models.cost_gcn.cost_gcn import CoStGcn, CoStGcnBlock, CoTemporalConvolution
-from models.st_gcn.st_gcn import StGcnBlock, TemporalConvolution, StGcn
+from models.base import (
+    CoStGcnBlock,
+    CoTemporalConvolution,
+    StGcnBlock,
+    TemporalConvolution,
+)
+from models.cost_gcn.cost_gcn import CoStGcn
+from models.st_gcn.st_gcn import StGcn
 from datasets import ntu_rgbd
 import numpy as np
 
@@ -59,10 +65,10 @@ def test_CoTemporalConvolution():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + (kernel_size - 1 - reg.pad)],
+            output[t + (kernel_size - 1 - reg.padding)],
             atol=5e-7,
         )
-        for t in range(reg.pad, sample.shape[2] - (kernel_size - 1))
+        for t in range(reg.padding, sample.shape[2] - (kernel_size - 1))
     ]
 
     assert all(checks)
@@ -104,10 +110,10 @@ def test_CoStGcnBlock_no_residual():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.pad)],
+            output[t + (kernel_size - 1 - reg.tcn.padding)],
             atol=5e-7,
         )
-        for t in range(reg.tcn.pad, T - (kernel_size - 1))
+        for t in range(reg.tcn.padding, T - (kernel_size - 1))
     ]
 
     assert all(checks)
@@ -149,10 +155,10 @@ def test_CoStGcnBlock_residual_eq_channels():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.pad)],
+            output[t + (kernel_size - 1 - reg.tcn.padding)],
             atol=5e-7,
         )
-        for t in range(reg.tcn.pad, T - (kernel_size - 1))
+        for t in range(reg.tcn.padding, T - (kernel_size - 1))
     ]
 
     assert all(checks)
@@ -194,10 +200,10 @@ def test_CoStGcnBlock_residual_neq_channels():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.pad)],
+            output[t + (kernel_size - 1 - reg.tcn.padding)],
             atol=5e-7,
         )
-        for t in range(reg.tcn.pad, T - (kernel_size - 1))
+        for t in range(reg.tcn.padding, T - (kernel_size - 1))
     ]
 
     assert all(checks)
@@ -241,7 +247,7 @@ def test_CoStGcnBlock_residual_neq_channels_strided():
             output[t * 2 + co.delay],
             atol=5e-7,
         )
-        for t in range(reg.tcn.pad // stride, (T - co.tcn.pad) // stride)
+        for t in range(reg.tcn.padding // stride, (T - co.tcn.pad) // stride)
     ]
 
     assert all(checks)

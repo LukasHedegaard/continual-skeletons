@@ -1,6 +1,6 @@
 import torch
-from models.st_gcn_mod.st_gcn_mod import StGcnBlock, StGcnMod
-from models.cost_gcn.cost_gcn import CoStGcnBlock
+from models.base import StGcnBlock, CoStGcnBlock
+from models.st_gcn_mod.st_gcn_mod import StGcnMod
 from models.cost_gcn_mod.cost_gcn_mod import CoStGcnMod
 from datasets import ntu_rgbd
 
@@ -41,10 +41,10 @@ def test_StGcnModBlock_residual_eq_channels():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.pad)],
+            output[t + (kernel_size - 1 - reg.tcn.padding)],
             atol=5e-7,
         )
-        for t in range(reg.tcn.pad, T - (kernel_size - 1))
+        for t in range(reg.tcn.padding, T - (kernel_size - 1))
     ]
 
     assert all(checks)
