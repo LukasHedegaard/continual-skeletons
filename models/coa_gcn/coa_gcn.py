@@ -260,7 +260,6 @@ class CoTemporalConvolution(nn.Module):
 
     def forward(self, x):
         x = self.t_conv(x)
-        # if x is None:
         if type(x) is TensorPlaceholder:  # Support strided conv
             return x
         x = self.bn(x)
@@ -297,8 +296,6 @@ class CoAdaptiveGcnBlock(nn.Module):
             )
 
     def forward(self, x):
-        if type(x) != torch.Tensor:
-            print("hey")
         z = self.tcn(self.gcn(x))
         r = self.residual(x)
         if type(z) is TensorPlaceholder:
