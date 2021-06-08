@@ -79,7 +79,7 @@ class CoStGcnBase(RideMixin):
             result = self.forward_clip(x)
         elif self.hparams.forward_mode == "frame":
             result = self.forward_frame(x[:, :, 0])
-        else:
+        else:  # pragma: no cover
             raise RuntimeError("Model forward_mode should be one of {'clip', 'frame'}.")
         return result
 
