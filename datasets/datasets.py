@@ -7,7 +7,7 @@ from pytorch_lightning.utilities.parsing import AttributeDict
 from ride.core import RideClassificationDataset
 from torch.utils.data import DataLoader, Dataset
 
-from datasets import ntu_rgbd, kinetics, tools
+from datasets import kinetics, ntu_rgbd, tools
 
 
 class GraphDatasets(RideClassificationDataset):

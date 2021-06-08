@@ -1,17 +1,16 @@
-import torch
-from torch import Tensor
 from typing import Tuple, Union
+
+import torch
+from ride.utils.logging import getLogger
+from torch import Tensor
 from torch.nn.modules.pooling import (
-    _AdaptiveAvgPoolNd,
     AdaptiveAvgPool1d,
     AdaptiveMaxPool1d,
     AvgPool1d,
     MaxPool1d,
 )
 
-from ride.utils.logging import getLogger
 from .utils import FillMode
-
 
 State = Tuple[Tensor, int]
 Pool1D = Union[AvgPool1d, MaxPool1d, AdaptiveAvgPool1d, AdaptiveMaxPool1d]

@@ -1,7 +1,8 @@
-from continual.utils import TensorPlaceholder
 import torch
 from torch.nn import Conv1d, Conv2d
+
 from continual import ConvCo1d, ConvCo2d
+from continual.utils import TensorPlaceholder
 
 
 def test_ConvCo1d():

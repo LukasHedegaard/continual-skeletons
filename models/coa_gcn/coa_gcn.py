@@ -2,11 +2,11 @@ import ride  # isort:skip
 
 import torch.nn as nn
 
-from datasets import datasets
-from models.utils import init_weights
 from continual import AvgPoolCo1d
-from models.base import CoStGcnBase, CoStGcnBlock
+from datasets import datasets
 from models.a_gcn.a_gcn import AdaptiveGraphConvolution
+from models.base import CoStGcnBase, CoStGcnBlock
+from models.utils import init_weights
 
 
 class CoAGcn(

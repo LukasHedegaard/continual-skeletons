@@ -1,8 +1,9 @@
 from enum import Enum
-from torch import Tensor
-from torch.nn import Module
 from functools import wraps
 from typing import Callable, Tuple
+
+from torch import Tensor
+from torch.nn import Module
 
 
 class TensorPlaceholder:

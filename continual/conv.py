@@ -1,18 +1,19 @@
+from typing import Tuple
+
 import torch
 import torch.nn.functional as F
+from ride.utils.logging import getLogger
 from torch import Tensor
-from typing import Tuple
 from torch.nn.modules.conv import (
     _ConvNd,
-    _reverse_repeat_tuple,
-    _size_1_t,
-    _single,
-    _size_2_t,
     _pair,
+    _reverse_repeat_tuple,
+    _single,
+    _size_1_t,
+    _size_2_t,
 )
-from .utils import FillMode, TensorPlaceholder
-from ride.utils.logging import getLogger
 
+from .utils import FillMode, TensorPlaceholder
 
 State = Tuple[Tensor, int, int]
 

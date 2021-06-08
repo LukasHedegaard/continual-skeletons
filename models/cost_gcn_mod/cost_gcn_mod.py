@@ -3,11 +3,11 @@ Modified based on: https://github.com/open-mmlab/mmskeleton
 """
 import ride  # isort:skip
 import torch.nn as nn
-from datasets import datasets
-from models.utils import init_weights
+
 from continual import AvgPoolCo1d
+from datasets import datasets
 from models.base import CoStGcnBase, CoStGcnBlock
-from models.utils import calc_momentum
+from models.utils import calc_momentum, init_weights
 
 
 class CoStGcnMod(

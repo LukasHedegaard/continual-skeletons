@@ -1,4 +1,7 @@
+import numpy as np
 import torch
+
+from datasets import ntu_rgbd
 from models.base import (
     CoStGcnBlock,
     CoTemporalConvolution,
@@ -7,8 +10,6 @@ from models.base import (
 )
 from models.cost_gcn.cost_gcn import CoStGcn
 from models.st_gcn.st_gcn import StGcn
-from datasets import ntu_rgbd
-import numpy as np
 
 
 def default_hparams():

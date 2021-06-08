@@ -1,8 +1,9 @@
 import torch
-from models.base import StGcnBlock, CoStGcnBlock
-from models.st_gcn_mod.st_gcn_mod import StGcnMod
-from models.cost_gcn_mod.cost_gcn_mod import CoStGcnMod
+
 from datasets import ntu_rgbd
+from models.base import CoStGcnBlock, StGcnBlock
+from models.cost_gcn_mod.cost_gcn_mod import CoStGcnMod
+from models.st_gcn_mod.st_gcn_mod import StGcnMod
 
 
 def test_StGcnModBlock_residual_eq_channels():

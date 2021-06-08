@@ -1,15 +1,12 @@
+from operator import attrgetter
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from ride.core import RideMixin, Configs
-from continual import (
-    ConvCo2d,
-    unsqueezed,
-    Delay,
-    TensorPlaceholder,
-)
-from models.utils import init_weights, zero, unity
-from operator import attrgetter
+from ride.core import Configs, RideMixin
+
+from continual import ConvCo2d, Delay, TensorPlaceholder, unsqueezed
+from models.utils import init_weights, unity, zero
 
 
 class CoStGcnBase(RideMixin):

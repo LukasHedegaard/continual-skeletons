@@ -3,9 +3,9 @@ import ride  # isort:skip
 import torch.nn as nn
 
 from datasets import datasets
-from models.utils import init_weights
-from models.base import StGcnBlock
 from models.a_gcn.a_gcn import AdaptiveGraphConvolution
+from models.base import StGcnBlock
+from models.utils import init_weights
 
 
 class AGcnMod(

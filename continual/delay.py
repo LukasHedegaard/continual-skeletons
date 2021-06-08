@@ -1,9 +1,8 @@
 from typing import Tuple
 
 import torch
-from torch import Tensor
-
 from ride.utils.logging import getLogger
+from torch import Tensor
 
 from .utils import FillMode
 
