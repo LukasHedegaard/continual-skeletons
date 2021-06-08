@@ -61,7 +61,6 @@ class StGcnMod(
             x = self.layers[f"layer{i + 1}"](x)
         # N*M,C,T,V
         c_new = x.size(1)
-        x = x[:, :, 40:, :]  # CoStGcn has an initial delay of 40
         x = x.view(N, M, c_new, -1)
         x = x.mean(3).mean(1)
         x = self.fc(x)

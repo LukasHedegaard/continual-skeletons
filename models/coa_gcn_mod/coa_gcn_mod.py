@@ -45,11 +45,7 @@ class CoAGcnMod(
         )
         self.pool_size = hparams.pool_size
         if self.pool_size == -1:
-            self.pool_size = (
-                num_frames // self.stride
-                - self.delay_conv_blocks
-                - 10 * 8  # No padding was used in A-GCN-mod, hence the layers shrink
-            )
+            self.pool_size = num_frames // self.stride - self.delay_conv_blocks
         self.pool = AvgPoolCo1d(window_size=self.pool_size)
         self.fc = nn.Linear(256, num_classes)
 

@@ -72,7 +72,9 @@ class CoStGcnBase(RideMixin):
 
     def forward(self, x):
         result = None
-        if self.hparams.forward_mode == "clip":
+        if self.hparams.forward_mode == "clip" and self.training:
+            result = self.forward_clip_efficient(x)
+        elif self.hparams.forward_mode == "clip" and not self.training:
             result = self.forward_clip(x)
         elif self.hparams.forward_mode == "frame":
             result = self.forward_frame(x[:, :, 0])
@@ -82,7 +84,11 @@ class CoStGcnBase(RideMixin):
 
     def forward_clip(self, x):
         """Forward clip.
-        Initialise network with first frames and predict on the last
+        Initialise network with first frames and predict on the last.
+        NB: This function should not be used for training.
+            Because running statistics in the batch norm modules include all inputs,
+            the transient response would add to these statistics.
+            For training, use `forward_clip_efficient`.
         """
         self.clean_states()
         result = None
@@ -92,7 +98,7 @@ class CoStGcnBase(RideMixin):
         return result
 
     def forward_clip_efficient(self, x):
-        """Efficient verison of forward clip.
+        """Efficient version of forward clip.
         Compute features layer by layer as in regular convolution.
         Produce prediction corresponding to last frame.
         """
@@ -115,18 +121,18 @@ class CoStGcnBase(RideMixin):
 
         for i in range(len(self.layers)):
             x = self.layers[f"layer{i + 1}"].forward_clip(x)
+            # Discard frames from transient response
+            x = x[:, :, self.layers[f"layer{i + 1}"].delay :]
 
-        # N*M,C,V
-        C_new = x.size(1)
-        x = x.view(N, M, C_new, V).mean(3).mean(1)
-        x = self.pool(x)
-        x = self.fc(x)
+        # N*M, C, T, V
+        _, C_new, T_new, _ = x.shape
+        x = x.view(N, M, C_new, -1, V).mean(4).mean(1)
+        x = [self.pool(x[:, :, t]) for t in range(T_new)]
+        d = self.hparams.predict_after_frames - self.delay_conv_blocks
+        i = d if d > 0 else -1
+        x = self.fc(x[i])
         self.last_output = x
-
-        result = None
-        for t in range(self.hparams.predict_after_frames or T):
-            result = self.forward_frame(x[:, :, t])
-        return result
+        return self.last_output
 
     def forward_frame(self, x):
         self.clean_states_on_shape_change(x.shape)
@@ -314,12 +320,13 @@ class CoTemporalConvolution(torch.nn.Module):
     ):
         super(CoTemporalConvolution, self).__init__()
 
-        self.pad = int((kernel_size - 1) / 2)
+        self.padding = 0  # int((kernel_size - 1) / 2)
+        self.kernel_size = kernel_size
         self.t_conv = ConvCo2d(
             in_channels,
             out_channels,
             kernel_size=(kernel_size, 1),
-            padding=(self.pad, 0),
+            padding=(self.padding, 0),
             stride=(stride, 1),
         )
         self.bn = torch.nn.BatchNorm1d(out_channels, momentum=bn_momentum)
@@ -365,14 +372,14 @@ class CoStGcnBlock(torch.nn.Module):
         if not residual:
             self.residual = lambda x: 0
         elif (in_channels == out_channels) and (self.stride == 1):
-            self.residual = Delay(self.tcn.t_conv.delay, temporal_fill="zeros")
+            self.residual = Delay(self.tcn.kernel_size // 2, temporal_fill="zeros")
         else:
             self.residual = CoTempConv(
                 in_channels,
                 out_channels,
                 kernel_size=1,
                 stride=self.stride,
-                extra_delay=self.tcn.t_conv.delay // self.stride,
+                extra_delay=(self.tcn.kernel_size // 2) // self.stride,
             )
 
     def forward(self, x):
@@ -381,6 +388,16 @@ class CoStGcnBlock(torch.nn.Module):
         if type(z) is TensorPlaceholder:
             return TensorPlaceholder(z.shape)
         return self.relu(z + r)
+
+    def forward_clip(self, x):
+        NM, C, T, V = x.shape
+        res = []
+        for t in range(T):
+            z = self.tcn(self.gcn(x[:, :, t]))
+            r = self.residual(x[:, :, t])
+            if type(z) is not TensorPlaceholder:
+                res.append(self.relu(z + r))
+        return torch.stack(res, dim=2)
 
     @property
     def delay(self):

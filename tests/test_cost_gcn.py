@@ -245,10 +245,10 @@ def test_CoStGcnBlock_residual_neq_channels_strided():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t * 2 + co.delay],
+            output[t * 2 + co.delay // 2],
             atol=5e-7,
         )
-        for t in range(reg.tcn.padding // stride, (T - co.tcn.pad) // stride)
+        for t in range(reg.tcn.padding // stride, (T - co.tcn.delay // 2) // stride)
     ]
 
     assert all(checks)
@@ -277,10 +277,7 @@ def test_simple_costgcn():
         CoStGcnBlock(in_channels, out_channels, A, stride=stride),
     )
     total_stride = np.prod([block.stride for block in co])
-    co_delay = sum([block.delay for block in co if hasattr(block, "delay")])
-    co_pads = (
-        sum([block.tcn.pad for block in co if hasattr(block, "tcn")]) // total_stride
-    )
+    wait = sum([block.tcn.kernel_size // 2 for block in co if hasattr(block, "tcn")])
 
     #  Transfer weights
     state_dict = reg.state_dict()
@@ -301,10 +298,10 @@ def test_simple_costgcn():
     checks = [
         torch.allclose(
             target[:, :, t],
-            output[t * stride + co_delay],
+            output[t * total_stride + wait],
             atol=5e-6,
         )
-        for t in range(co_pads, (T - co_delay) // stride)
+        for t in range(wait // 2, (T - wait) // total_stride)
     ]
 
     assert all(checks)
