@@ -1,5 +1,6 @@
-import torch
 import pytest
+import torch
+
 from datasets import ntu_rgbd
 from models.base import CoStGcnBlock, StGcnBlock
 from models.cost_gcn_mod.cost_gcn_mod import CoStGcnMod

@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from models.a_gcn_mod.a_gcn_mod import AGcnMod
@@ -5,7 +6,7 @@ from models.coa_gcn_mod.coa_gcn_mod import CoAGcnMod
 
 
 def test_StGcnModBlock_residual_eq_channels():
-    hparams = default_hparams()
+    hparams = dummy_hparams()
     reg = AGcnMod(hparams)
     co = CoAGcnMod(hparams)
 
