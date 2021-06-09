@@ -12,8 +12,7 @@ from models.utils import init_weights
 class AdaptiveGraphConvolution(nn.Module):
     def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, coff_embedding=4):
         super(AdaptiveGraphConvolution, self).__init__()
-        inter_channels = out_channels // coff_embedding
-        self.inter_c = inter_channels
+        self.inter_c = out_channels // coff_embedding
         self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
         nn.init.constant_(self.graph_attn, 1)
         self.A = nn.Parameter(
@@ -25,8 +24,8 @@ class AdaptiveGraphConvolution(nn.Module):
         self.b_conv = nn.ModuleList()
         for i in range(self.num_subset):
             self.g_conv.append(nn.Conv2d(in_channels, out_channels, 1))
-            self.a_conv.append(nn.Conv2d(in_channels, inter_channels, 1))
-            self.b_conv.append(nn.Conv2d(in_channels, inter_channels, 1))
+            self.a_conv.append(nn.Conv2d(in_channels, self.inter_c, 1))
+            self.b_conv.append(nn.Conv2d(in_channels, self.inter_c, 1))
             init_weights(self.g_conv[i], bs=self.num_subset)
             init_weights(self.a_conv[i])
             init_weights(self.b_conv[i])
@@ -58,6 +57,8 @@ class AdaptiveGraphConvolution(nn.Module):
                 .view(N, V, self.inter_c * T)
             )
             A2 = self.b_conv[i](x).view(N, self.inter_c * T, V)
+            # The matmul(A1, A2) yields a attn matrix over all vertices
+            # Since it accounts for all timesteps, it cannot be made continual :-(
             A1 = self.soft(torch.matmul(A1, A2) / A1.size(-1))  # N V V
             A1 = A1 + A[i]
             x_a = x.view(N, C * T, V)
