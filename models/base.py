@@ -187,7 +187,7 @@ class CoStGcnBase(RideMixin):
 
 
 class GraphConvolution(nn.Module):
-    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1):
+    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, *args, **kwargs):
         super(GraphConvolution, self).__init__()
         self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
         nn.init.constant_(self.graph_attn, 1)
