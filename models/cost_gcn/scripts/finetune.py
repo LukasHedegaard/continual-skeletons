@@ -22,7 +22,7 @@ subprocess.call(
         "--id",
         "finetune_all_layers",
         "--gpus",
-        "3",
+        "4",
         "--forward_mode",
         "clip",
         "--train",
@@ -33,7 +33,7 @@ subprocess.call(
         "--test",
         "--profile_model",
         "--batch_size",
-        "20",
+        "18",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -65,7 +65,7 @@ subprocess.call(
         "--unfreeze_layers_initial",
         "-1",
         "--learning_rate",
-        "0.03125",  # Apply scaling rule: 0,1 / 64 * 20
+        "0.1",  # Apply scaling rule: 0,1 / 64 * 20 * 4 (gpus) = 0,125
         "--weight_decay",
         "0.0001",
         "--distributed_backend",
