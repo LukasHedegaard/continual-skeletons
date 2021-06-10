@@ -19,39 +19,38 @@ class CoStGcn(
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
-        (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
+        # num_channels, num_frames, num_vertices, num_skeletons
+        (C_in, T, V, S) = self.input_shape
         num_classes = self.num_classes
 
         A = self.graph.A
 
         # BN momentum should match that of clip-based inference
         # The number of frames is reduced as stride increases
-        bn_mom1 = calc_momentum(num_frames)
-        bn_mom2 = calc_momentum(num_frames // 2)
-        bn_mom3 = calc_momentum(num_frames // (2 * 2))
+        bn_mom1 = calc_momentum(T)
+        bn_mom2 = calc_momentum(T // 2)
+        bn_mom3 = calc_momentum(T // (2 * 2))
 
         # Define layers
-        self.data_bn = nn.BatchNorm1d(
-            num_skeletons * num_channels * num_vertices, momentum=bn_mom1
-        )
+        # fmt: off
+        self.data_bn = nn.BatchNorm1d(S * C_in * V, momentum=bn_mom1)
         self.layers = nn.ModuleDict(
             {
-                "layer1": CoStGcnBlock(
-                    num_channels, 64, A, residual=False, bn_momentum=bn_mom1
-                ),
-                "layer2": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
-                "layer3": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
-                "layer4": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1),
-                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom2, stride=2),
-                "layer6": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
-                "layer7": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2),
-                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom3, stride=2),
-                "layer9": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
-                "layer10": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3),
+                "layer1": CoStGcnBlock(C_in, 64, A, bn_momentum=bn_mom1, t_padding=4, residual=False),
+                "layer2": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
+                "layer3": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
+                "layer4": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
+                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom2, t_padding=4, stride=2),
+                "layer6": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2, t_padding=4),
+                "layer7": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2, t_padding=4),
+                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom3, t_padding=4, stride=2),
+                "layer9": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3, t_padding=4),
+                "layer10": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3, t_padding=4),
             }
         )
+        # fmt: on
         if self.hparams.pool_size == -1:
-            self.hparams.pool_size = num_frames // self.stride - self.delay_conv_blocks
+            self.hparams.pool_size = T // self.stride - self.delay_conv_blocks
         self.pool = AvgPoolCo1d(window_size=self.hparams.pool_size)
         self.fc = nn.Linear(256, num_classes)
 

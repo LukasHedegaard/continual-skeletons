@@ -120,13 +120,20 @@ class CoStGcnBase(RideMixin):
         )
 
         for i in range(len(self.layers)):
+            if i == 4:
+                print("Stop")
             x = self.layers[f"layer{i + 1}"].forward_clip(x)
             # Discard frames from transient response
-            x = x[:, :, self.layers[f"layer{i + 1}"].delay :]
+            discard = (
+                self.layers[f"layer{i + 1}"].delay
+                // self.layers[f"layer{i + 1}"].stride
+            )
+            x = x[:, :, discard:]
 
         # N*M, C, T, V
         _, C_new, T_new, _ = x.shape
         x = x.view(N, M, C_new, -1, V).mean(4).mean(1)
+        assert self.pool.window_size == T_new
         x = [self.pool(x[:, :, t]) for t in range(T_new)]
         d = self.hparams.predict_after_frames - self.delay_conv_blocks
         i = d if d > 0 else -1
@@ -317,10 +324,11 @@ class CoTemporalConvolution(torch.nn.Module):
         stride=1,
         extra_delay: int = None,
         bn_momentum=0.1,
+        padding=0,
     ):
         super(CoTemporalConvolution, self).__init__()
 
-        self.padding = 0  # int((kernel_size - 1) / 2)
+        self.padding = padding
         self.kernel_size = kernel_size
         self.t_conv = ConvCo2d(
             in_channels,
@@ -361,13 +369,16 @@ class CoStGcnBlock(torch.nn.Module):
         stride=1,
         residual=True,
         bn_momentum=0.1,
+        t_padding=0,
         GraphConv=GraphConvolution,
         CoTempConv=CoTemporalConvolution,
     ):
         super(CoStGcnBlock, self).__init__()
         self.stride = stride
         self.gcn = unsqueezed(GraphConv(in_channels, out_channels, A, bn_momentum))
-        self.tcn = CoTempConv(out_channels, out_channels, stride=stride)
+        self.tcn = CoTempConv(
+            out_channels, out_channels, stride=stride, padding=t_padding
+        )
         self.relu = torch.nn.ReLU()
         if not residual:
             self.residual = lambda x: 0
