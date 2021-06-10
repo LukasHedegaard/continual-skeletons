@@ -120,8 +120,6 @@ class CoStGcnBase(RideMixin):
         )
 
         for i in range(len(self.layers)):
-            if i == 4:
-                print("Stop")
             x = self.layers[f"layer{i + 1}"].forward_clip(x)
             # Discard frames from transient response
             discard = (
