@@ -1,4 +1,5 @@
 from typing import Tuple
+from .interface import _CoModule
 
 import torch
 from ride.utils.logging import getLogger
@@ -11,7 +12,7 @@ State = Tuple[Tensor, int]
 logger = getLogger(__name__)
 
 
-class Delay(torch.nn.Module):
+class Delay(torch.nn.Module, _CoModule):
     def __init__(
         self,
         delay: int,
@@ -19,7 +20,7 @@ class Delay(torch.nn.Module):
     ):
         assert delay > 0
         assert temporal_fill in {"zeros", "replicate"}
-        self.delay = delay
+        self._delay = delay
         self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
@@ -53,13 +54,6 @@ class Delay(torch.nn.Module):
         else:
             return None
 
-    def forward_regular(self, input: Tensor) -> Tensor:
-        # Pass into delay line, but discard output
-        self.forward(input)
-
-        # No delay during forward_regular
-        return input
-
     def forward(self, input: Tensor) -> Tensor:
         output, (self.state_buffer, self.state_index) = self._forward(
             input, self.get_state()
@@ -80,3 +74,18 @@ class Delay(torch.nn.Module):
         new_index = (index + 1) % self.delay
 
         return output, (buffer, new_index)
+
+    def forward_regular(self, input: Tensor) -> Tensor:
+        # Pass into delay line, but discard output
+        self.forward(input)
+
+        # No delay during forward_regular
+        return input
+
+    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
+        # No delay during forward_regular
+        return input
+
+    @property
+    def delay(self) -> int:
+        return self._delay

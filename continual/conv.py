@@ -1,10 +1,12 @@
 from typing import Tuple
-
+from .interface import _CoModule
 import torch
 import torch.nn.functional as F
 from ride.utils.logging import getLogger
 from torch import Tensor
 from torch.nn.modules.conv import (
+    Conv1d,
+    Conv2d,
     _ConvNd,
     _pair,
     _reverse_repeat_tuple,
@@ -20,7 +22,7 @@ State = Tuple[Tensor, int, int]
 logger = getLogger(__name__, log_once=True)
 
 
-class ConvCo1d(_ConvNd):
+class ConvCo1d(_ConvNd, _CoModule):
     def __init__(
         self,
         in_channels: int,
@@ -227,6 +229,16 @@ class ConvCo1d(_ConvNd):
         return x_out, (next_buffer, next_index, next_stride_index)
 
     def forward_regular(self, input: Tensor):
+        """Performs a layer-wise forward computation using the continual block.
+        The computation is performed frame-by-frame, and continual states are updated accordingly.
+        The output-input mapping the exact same as that of a regular convolution.
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
+        """
         assert (
             len(input.shape) == 3
         ), "A tensor of size B,C,T should be passed as input."
@@ -261,12 +273,27 @@ class ConvCo1d(_ConvNd):
             outs = torch.tensor([])
         return outs
 
+    def forward_regular_unrolled(self, input: Tensor):
+        """Performs a full forward computation exactly as the regular layer would.
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
+        """
+        assert (
+            len(input.shape) == 3
+        ), "A tensor of size B,C,T,S should be passed as input."
+        output = Conv1d._conv_forward(self, input, self.weight, self.bias)
+        return output
+
     @property
     def delay(self):
         return self.kernel_size[0] - 1
 
 
-class ConvCo2d(_ConvNd):
+class ConvCo2d(_ConvNd, _CoModule):
     def __init__(
         self,
         in_channels: int,
@@ -489,7 +516,17 @@ class ConvCo2d(_ConvNd):
 
         return x_out, (next_buffer, next_index, next_stride_index)
 
-    def forward_regular(self, input: Tensor):
+    def forward_regular(self, input: Tensor) -> Tensor:
+        """Performs a layer-wise forward computation using the continual block.
+        The computation is performed frame-by-frame, and continual states are updated accordingly.
+        The output-input mapping the exact same as that of a regular convolution.
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
+        """
         assert (
             len(input.shape) == 4
         ), "A tensor of size B,C,T,S should be passed as input."
@@ -523,6 +560,21 @@ class ConvCo2d(_ConvNd):
         else:
             outs = torch.tensor([])
         return outs
+
+    def forward_regular_unrolled(self, input: Tensor):
+        """Performs a full forward computation exactly as the regular layer would.
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
+        """
+        assert (
+            len(input.shape) == 4
+        ), "A tensor of size B,C,T,S should be passed as input."
+        output = Conv2d._conv_forward(self, input, self.weight, self.bias)
+        return output
 
     @property
     def delay(self):

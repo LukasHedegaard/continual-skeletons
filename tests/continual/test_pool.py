@@ -30,6 +30,10 @@ def test_AvgPoolCo1d():
     output = co_pool.forward_regular(sample)
     assert torch.allclose(target, output)
 
+    # Exact
+    output2 = co_pool.forward_regular_unrolled(sample)
+    assert torch.equal(target, output2)
+
 
 def test_AdaptiveAvgPoolCo2d():
     C = 2

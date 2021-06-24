@@ -9,8 +9,8 @@ from torch.nn.modules.pooling import (
     AvgPool1d,
     MaxPool1d,
 )
-
 from .utils import FillMode
+from .interface import _CoModule
 
 State = Tuple[Tensor, int]
 Pool1D = Union[AvgPool1d, MaxPool1d, AdaptiveAvgPool1d, AdaptiveMaxPool1d]
@@ -29,7 +29,7 @@ __all__ = [
 State = Tuple[Tensor, int]
 
 
-class AvgPoolCo1d(torch.nn.Module):
+class AvgPoolCo1d(torch.nn.Module, _CoModule):
     """
     Continual Average Pool in 1D
 
@@ -103,7 +103,7 @@ class AvgPoolCo1d(torch.nn.Module):
         input: Tensor,
         prev_state: State,
     ) -> Tuple[Tensor, State]:
-        assert len(input.shape) == 2, "Only a single time-instance should be passed."
+        assert len(input.shape) == 2, "A tensor of size B,C should be passed as input."
 
         if prev_state is None:
             buffer, index = self.init_state(input)
@@ -129,8 +129,16 @@ class AvgPoolCo1d(torch.nn.Module):
         return pooled_window, (new_buffer, new_index)
 
     def forward_regular(self, input: Tensor):
-        """If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
+        """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
+
+        If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
         Otherwise, the pooling is performed per frame
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
         """
         assert (
             len(input.shape) == 3
@@ -153,6 +161,31 @@ class AvgPoolCo1d(torch.nn.Module):
         else:
             return torch.stack(outs, dim=2)
 
+    def forward_regular_unrolled(self, input: Tensor):
+        """Performs a full forward computation exactly as the regular layer would.
+
+        Args:
+            input (Tensor): Layer input
+
+        Returns:
+            Tensor: Layer output
+        """
+        assert (
+            len(input.shape) == 3
+        ), "A tensor of size B,C,T should be passed as input."
+        return torch.nn.functional.avg_pool1d(
+            input,
+            kernel_size=self.window_size,
+            stride=self.temporal_dilation,
+            padding=0,
+            ceil_mode=False,
+            count_include_pad=True,
+        )
+
+    @property
+    def delay(self):
+        return self.window_size - 1
+
 
 def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
     """Wraps a pooling module to create a recursive version which pools across execusions
@@ -162,7 +195,7 @@ def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
     """
     assert cls in {AdaptiveAvgPool1d, MaxPool1d, AvgPool1d, AdaptiveMaxPool1d}
 
-    class RePooled(cls):
+    class RePooled(cls, _CoModule):
         def __init__(
             self,
             window_size: int,
@@ -262,13 +295,21 @@ def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
             pooled_window = x
 
             new_index = (index + 1) % self.window_size
-            new_buffer = buffer  # buffer.clone() if self.training else buffer.detach()
+            new_buffer = buffer
 
             return pooled_window, (new_buffer, new_index)
 
         def forward_regular(self, input: Tensor):
-            """If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
+            """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
+
+            If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
             Otherwise, the pooling is performed per frame
+
+            Args:
+                input (Tensor): Layer input
+
+            Returns:
+                Tensor: Layer output
             """
             assert (
                 len(input.shape) == 4
@@ -284,12 +325,24 @@ def RecursivelyWindowPooled(cls: Pool1D) -> torch.nn.Module:  # noqa: C901
                 return torch.tensor([])
 
             if input.shape[2] == self.window_size:
-                # In order to be compatible with downstream forward3d, select only last frame
+                # In order to be compatible with downstream continual forward, select only last frame
                 # This corrsponds to the regular global pool
                 return outs[-1].unsqueeze(2)
-
             else:
                 return torch.stack(outs, dim=2)
+
+        def forward_regular_unrolled(self, input: Tensor):
+            """Performs a full forward computation exactly as the regular layer would.
+
+            Args:
+                input (Tensor): Layer input
+
+            Returns:
+                Tensor: Layer output
+            """
+            # For now, use implementation in forward_regular
+            # TODO: Update impl
+            return self.forward_regular(input)
 
         @property
         def delay(self):

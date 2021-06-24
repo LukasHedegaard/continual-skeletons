@@ -31,6 +31,10 @@ def test_ConvCo1d():
     output = co_conv.forward_regular(sample)
     assert torch.allclose(target, output)
 
+    # Exact computation
+    output2 = co_conv.forward_regular_unrolled(sample)
+    assert torch.equal(target, output2)
+
 
 def test_ConvCo1d_stride():
     C = 2
@@ -90,6 +94,10 @@ def test_ConvCo2d():
     # Whole time-series
     output = co_conv.forward_regular(sample)
     assert torch.allclose(target, output)
+
+    # Exact computation
+    output2 = co_conv.forward_regular_unrolled(sample)
+    assert torch.equal(target, output2)
 
 
 def test_ConvCo2d_stride():
