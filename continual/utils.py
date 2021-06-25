@@ -1,10 +1,12 @@
+from contextlib import contextmanager
 from enum import Enum
-from functools import wraps, reduce
+from functools import reduce, wraps
 from typing import Callable, Tuple
 
 from torch import Tensor
 from torch.nn import Module
-from contextlib import contextmanager
+
+from .interface import _CoModule
 
 
 class TensorPlaceholder:
@@ -22,6 +24,17 @@ class FillMode(Enum):
     ZEROS = "zeros"
 
 
+class Zero(Module, _CoModule):
+    def forward(self, input: Tensor) -> Tensor:
+        return 0
+
+    def forward_regular(self, input: Tensor) -> Tensor:
+        return 0
+
+    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
+        return 0
+
+
 def unsqueezed(instance: Module, dim: int = 2):
     def decorator(func: Callable[[Tensor], Tensor]):
         @wraps(func)
@@ -33,6 +46,7 @@ def unsqueezed(instance: Module, dim: int = 2):
 
         return call
 
+    instance.forward_regular_unrolled = instance.forward
     instance.forward_regular = instance.forward
     instance.forward = decorator(instance.forward)
 

@@ -1,10 +1,11 @@
 from torch import Tensor
 from torch.nn.modules.batchnorm import _BatchNorm
+
 from .interface import _CoModule
 from .utils import temporary_parameter
 
 
-def normalised_momentum(num_frames: int, base_mom=0.1):
+def normalise_momentum(num_frames: int, base_mom=0.1):
     return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
@@ -22,7 +23,7 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
             num_features, eps, momentum, affine, track_running_stats
         )
         # Normalise momentum w.r.t. the expected clip size
-        self.momentum = normalised_momentum(window_size, momentum)
+        self.momentum = normalise_momentum(window_size, momentum)
         self.unnormalised_momentum = momentum
 
     def _check_input_dim(self, input):
@@ -34,7 +35,7 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
             )
 
     def forward(self, input: Tensor) -> Tensor:
-        output = _BatchNorm.forward(input)
+        output = _BatchNorm.forward(self, input)
         return output
 
     def forward_regular(self, input: Tensor) -> Tensor:
@@ -42,7 +43,7 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
 
     def forward_regular_unrolled(self, input: Tensor) -> Tensor:
         with temporary_parameter(self, "momentum", self.unnormalised_momentum):
-            output = _BatchNorm.forward(input)
+            output = _BatchNorm.forward(self, input)
         return output
 
     @property

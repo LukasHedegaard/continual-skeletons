@@ -1,10 +1,10 @@
 from typing import Tuple
-from .interface import _CoModule
 
 import torch
 from ride.utils.logging import getLogger
 from torch import Tensor
 
+from .interface import _CoModule
 from .utils import FillMode
 
 State = Tuple[Tensor, int]

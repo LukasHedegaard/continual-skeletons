@@ -30,6 +30,9 @@ def test_AGcnMod():
 
     # Forward
     o_reg = reg(sample)
-    o_co = co(sample)
+    o_co1 = co.forward(sample)
+    o_co2 = co.forward_regular_unrolled(sample)
 
-    assert torch.allclose(o_reg, o_co, rtol=1e-4)
+    assert torch.allclose(o_reg, o_co1, rtol=5e-4)
+    assert torch.allclose(o_reg, o_co2, rtol=1e-4)
+    assert torch.allclose(o_co1, o_co2, rtol=1e-4)

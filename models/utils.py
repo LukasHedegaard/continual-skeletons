@@ -24,10 +24,6 @@ def init_weights(module_, bs=1):
         nn.init.normal_(module_.weight, 0, math.sqrt(2.0 / bs))
 
 
-def calc_momentum(num_frames: int, base_mom=0.1):
-    return 2 / (num_frames * (2 / base_mom - 1) + 1)
-
-
 def zero(x):
     return 0
 

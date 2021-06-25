@@ -1,5 +1,5 @@
 from typing import Tuple
-from .interface import _CoModule
+
 import torch
 import torch.nn.functional as F
 from ride.utils.logging import getLogger
@@ -15,7 +15,8 @@ from torch.nn.modules.conv import (
     _size_2_t,
 )
 
-from .utils import FillMode, TensorPlaceholder
+from .interface import _CoModule
+from .utils import FillMode, TensorPlaceholder, temporary_parameter
 
 State = Tuple[Tensor, int, int]
 
@@ -573,7 +574,8 @@ class ConvCo2d(_ConvNd, _CoModule):
         assert (
             len(input.shape) == 4
         ), "A tensor of size B,C,T,S should be passed as input."
-        output = Conv2d._conv_forward(self, input, self.weight, self.bias)
+        with temporary_parameter(self, "padding", (0, *self.padding[1:])):
+            output = Conv2d._conv_forward(self, input, self.weight, self.bias)
         return output
 
     @property

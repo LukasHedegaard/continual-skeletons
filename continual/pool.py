@@ -9,8 +9,9 @@ from torch.nn.modules.pooling import (
     AvgPool1d,
     MaxPool1d,
 )
-from .utils import FillMode
+
 from .interface import _CoModule
+from .utils import FillMode
 
 State = Tuple[Tensor, int]
 Pool1D = Union[AvgPool1d, MaxPool1d, AdaptiveAvgPool1d, AdaptiveMaxPool1d]

@@ -1,5 +1,6 @@
-from torch import Tensor
 from abc import ABC
+
+from torch import Tensor
 
 
 class _CoModule(ABC):

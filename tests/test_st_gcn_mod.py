@@ -76,8 +76,8 @@ def test_StGcnMod():
     sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
 
     # Forward
-    o_co1 = co.forward_clip(sample)
-    o_co2 = co.forward_clip_efficient(sample)
+    o_co1 = co.forward_regular(sample)
+    o_co2 = co.forward_regular_unrolled(sample)
     o_reg = reg(sample)
 
     assert torch.allclose(o_reg, o_co1)
