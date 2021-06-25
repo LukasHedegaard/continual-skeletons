@@ -19,35 +19,34 @@ class CoStGcnMod(
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
-        (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
+        # num_channels, num_frames, num_vertices, num_skeletons
+        (C_in, T, V, S) = self.input_shape
         num_classes = self.num_classes
 
         A = self.graph.A
 
         # Define layers
-        self.data_bn = BatchNormCo2d(
-            num_skeletons * num_channels * num_vertices, window_size=num_frames
-        )
+        self.data_bn = BatchNormCo2d(S * C_in * V, window_size=T)
         # Pass in precise window-sizes to compensate propperly in BatchNorm modules
         # fmt: off
         self.layers = nn.ModuleDict(
             {
-                "layer1": CoStGcnBlock(num_channels, 64, A, padding=0, window_size=num_frames, residual=False),
-                "layer2": CoStGcnBlock(64, 64, A, padding=0, window_size=num_frames - 1 * 8),
-                "layer3": CoStGcnBlock(64, 64, A, padding=0, window_size=num_frames - 2 * 8),
-                "layer4": CoStGcnBlock(64, 64, A, padding=0, window_size=num_frames - 3 * 8),
-                "layer5": CoStGcnBlock(64, 128, A, padding=0, window_size=num_frames - 4 * 8, stride=1),
-                "layer6": CoStGcnBlock(128, 128, A, padding=0, window_size=(num_frames - 4 * 8) / 2 - 1 * 8),
-                "layer7": CoStGcnBlock(128, 128, A, padding=0, window_size=(num_frames - 4 * 8) / 2 - 2 * 8),
-                "layer8": CoStGcnBlock(128, 256, A, padding=0, window_size=(num_frames - 4 * 8) / 2 - 3 * 8, stride=1),
-                "layer9": CoStGcnBlock(256, 256, A, padding=0, window_size=((num_frames - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
-                "layer10": CoStGcnBlock(256, 256, A, padding=0, window_size=((num_frames - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
+                "layer1": CoStGcnBlock(C_in, 64, A, padding=0, window_size=T, residual=False),
+                "layer2": CoStGcnBlock(64, 64, A, padding=0, window_size=T - 1 * 8),
+                "layer3": CoStGcnBlock(64, 64, A, padding=0, window_size=T - 2 * 8),
+                "layer4": CoStGcnBlock(64, 64, A, padding=0, window_size=T - 3 * 8),
+                "layer5": CoStGcnBlock(64, 128, A, padding=0, window_size=T - 4 * 8, stride=1),
+                "layer6": CoStGcnBlock(128, 128, A, padding=0, window_size=(T - 4 * 8) / 2 - 1 * 8),
+                "layer7": CoStGcnBlock(128, 128, A, padding=0, window_size=(T - 4 * 8) / 2 - 2 * 8),
+                "layer8": CoStGcnBlock(128, 256, A, padding=0, window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1),
+                "layer9": CoStGcnBlock(256, 256, A, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
+                "layer10": CoStGcnBlock(256, 256, A, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
             }
         )
         # fmt: on
         self.pool_size = hparams.pool_size
         if self.pool_size == -1:
-            self.pool_size = num_frames // self.stride - self.delay_conv_blocks
+            self.pool_size = T // self.stride - self.delay_conv_blocks
         self.pool = AvgPoolCo1d(window_size=self.pool_size)
         self.fc = nn.Linear(256, num_classes)
 

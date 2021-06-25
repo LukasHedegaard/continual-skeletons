@@ -19,7 +19,7 @@ def test_StGcnModBlock_residual_eq_channels():
     co.eval()
 
     # Prepare data
-    sample = next(iter(reg.train_dataloader()))[0]
+    sample = next(iter(reg.train_dataloader()))
     N, C, T, V, M = sample.size()
     sample = sample.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
     sample = reg.data_bn(sample)
@@ -32,7 +32,7 @@ def test_StGcnModBlock_residual_eq_channels():
 
     T = sample.shape[2]
     kernel_size = 9
-    pad = reg.layers.layer1.tcn.pad
+    pad = reg.layers.layer1.tcn.padding
 
     # Forward
     target = reg.layers.layer1(sample)
@@ -46,7 +46,7 @@ def test_StGcnModBlock_residual_eq_channels():
         torch.allclose(
             target[:, :, t],
             output[t + (kernel_size - 1 - pad)],
-            atol=5e-7,
+            atol=5e-5,
         )
         for t in range(pad, T - (kernel_size - 1))
     ]

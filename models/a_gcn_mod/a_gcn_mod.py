@@ -26,45 +26,22 @@ class AGcnMod(
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
 
         GraphConv = AdaptiveGraphConvolution
+        # fmt: off
         self.layers = nn.ModuleDict(
             {
-                "layer1": StGcnBlock(
-                    num_channels,
-                    64,
-                    A,
-                    GraphConv=GraphConv,
-                    residual=False,
-                    temporal_padding=0,
-                ),
-                "layer2": StGcnBlock(
-                    64, 64, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer3": StGcnBlock(
-                    64, 64, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer4": StGcnBlock(
-                    64, 64, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer5": StGcnBlock(
-                    64, 128, A, GraphConv=GraphConv, temporal_padding=0, stride=1
-                ),
-                "layer6": StGcnBlock(
-                    128, 128, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer7": StGcnBlock(
-                    128, 128, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer8": StGcnBlock(
-                    128, 256, A, GraphConv=GraphConv, temporal_padding=0, stride=1
-                ),
-                "layer9": StGcnBlock(
-                    256, 256, A, GraphConv=GraphConv, temporal_padding=0
-                ),
-                "layer10": StGcnBlock(
-                    256, 256, A, GraphConv=GraphConv, temporal_padding=0
-                ),
+                "layer1": StGcnBlock(num_channels, 64, A, GraphConv=GraphConv, residual=False, temporal_padding=0),
+                "layer2": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer3": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer4": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer5": StGcnBlock(64, 128, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
+                "layer6": StGcnBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer7": StGcnBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer8": StGcnBlock(128, 256, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
+                "layer9": StGcnBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer10": StGcnBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
             }
         )
+        # fmt: on
         self.fc = nn.Linear(256, num_classes)
 
         # Initialize weights

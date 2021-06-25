@@ -282,7 +282,7 @@ class GraphDataset(Dataset):
 class DummyDataset(Dataset):
     def __init__(
         self,
-        input_shape=(4, 300, ntu_rgbd.NUM_NODES, 2),
+        input_shape=(3, 300, ntu_rgbd.NUM_NODES, 2),
         num_classes=3,
         num_samples=42,
         *args,
