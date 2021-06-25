@@ -11,7 +11,7 @@ LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
 GPUS = "1"
-DS_NAME = "ntu"
+DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 

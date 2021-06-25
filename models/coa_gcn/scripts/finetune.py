@@ -18,11 +18,11 @@ MODALITY = "joint"
 subprocess.call(
     [
         "python3",
-        "models/cost_gcn/cost_gcn.py",
+        "models/coa_gcn/coa_gcn.py",
         "--id",
         "finetune_all_layers",
         "--gpus",
-        "4",
+        "2",
         "--forward_mode",
         "clip",
         "--train",
@@ -33,7 +33,7 @@ subprocess.call(
         "--test",
         "--profile_model",
         "--batch_size",
-        "18",
+        "12",
         "--num_workers",
         "8",
         "--dataset_normalization",
@@ -55,7 +55,7 @@ subprocess.call(
         "--dataset_test_labels",
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
-        "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt",
+        "models/a_gcn/weights/agcn_ntu60_xview_joint.pt",
         "--logging_backend",
         "wandb",
         "--pool_size",
@@ -65,7 +65,7 @@ subprocess.call(
         "--unfreeze_layers_initial",
         "-1",
         "--learning_rate",
-        "0.1",  # Apply scaling rule: 0,1 / 64 * 20 * 4 (gpus) = 0,125
+        "0.015",  # Apply scaling rule: 0,1 / 64 * 14
         "--weight_decay",
         "0.0001",
         "--distributed_backend",

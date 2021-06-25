@@ -25,6 +25,10 @@ Research repository for Continual Spatio-Temporal Graph Convolutional Neural Net
     make install
     ```
 
+### Pretrained weights
+Pretrained model weights are available [here](https://drive.google.com/drive/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72?usp=sharing)
+
+
 ### Lint
 Lint using [black](https://github.com/psf/black) and [isort](https://github.com/timothycrosley/isort/):
 ```bash

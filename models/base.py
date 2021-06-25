@@ -126,11 +126,16 @@ class CoStGcnBase(RideMixin, _CoModule):
         for i in range(len(self.layers)):
             x = self.layers[f"layer{i + 1}"].forward_regular(x)
             # Discard frames from transient response
-            x = x[:, :, self.layers[f"layer{i + 1}"].delay :]
+            discard = (
+                self.layers[f"layer{i + 1}"].delay
+                // self.layers[f"layer{i + 1}"].stride
+            )
+            x = x[:, :, discard:]
 
         # N*M, C, T, V
         _, C_new, T_new, _ = x.shape
         x = x.view(N, M, C_new, -1, V).mean(4).mean(1)
+        assert self.pool.window_size == T_new
         x = [self.pool(x[:, :, t]) for t in range(T_new)]
         d = self.hparams.predict_after_frames - self.delay_conv_blocks
         i = d if d > 0 else -1
@@ -218,7 +223,7 @@ class CoStGcnBase(RideMixin, _CoModule):
 
 
 class GraphConvolution(nn.Module):
-    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1):
+    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, *args, **kwargs):
         super(GraphConvolution, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels

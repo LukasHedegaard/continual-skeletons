@@ -19,7 +19,8 @@ class CoStGcn(
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
-        (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
+        # num_channels, num_frames, num_vertices, num_skeletons
+        (C_in, T, V, S) = self.input_shape
         num_classes = self.num_classes
 
         A = self.graph.A
@@ -46,7 +47,7 @@ class CoStGcn(
         )
         # fmt: on
         if self.hparams.pool_size == -1:
-            self.hparams.pool_size = num_frames // self.stride - self.delay_conv_blocks
+            self.hparams.pool_size = T // self.stride - self.delay_conv_blocks
         self.pool = AvgPoolCo1d(window_size=self.hparams.pool_size)
         self.fc = nn.Linear(256, num_classes)
 
