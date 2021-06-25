@@ -4,10 +4,10 @@ Modified based on: https://github.com/open-mmlab/mmskeleton
 import ride  # isort:skip
 import torch.nn as nn
 
-from continual import AvgPoolCo1d
+from continual import AvgPoolCo1d, BatchNormCo2d
 from datasets import datasets
 from models.base import CoStGcnBase, CoStGcnBlock
-from models.utils import calc_momentum, init_weights
+from models.utils import init_weights
 
 
 class CoStGcn(
@@ -25,27 +25,22 @@ class CoStGcn(
 
         A = self.graph.A
 
-        # BN momentum should match that of clip-based inference
-        # The number of frames is reduced as stride increases
-        bn_mom1 = calc_momentum(T)
-        bn_mom2 = calc_momentum(T // 2)
-        bn_mom3 = calc_momentum(T // (2 * 2))
-
         # Define layers
+        self.data_bn = BatchNormCo2d(S * C_in * V, window_size=T)
+        # Pass in precise window-sizes to compensate propperly in BatchNorm modules
         # fmt: off
-        self.data_bn = nn.BatchNorm1d(S * C_in * V, momentum=bn_mom1)
         self.layers = nn.ModuleDict(
             {
-                "layer1": CoStGcnBlock(C_in, 64, A, bn_momentum=bn_mom1, t_padding=4, residual=False),
-                "layer2": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
-                "layer3": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
-                "layer4": CoStGcnBlock(64, 64, A, bn_momentum=bn_mom1, t_padding=4),
-                "layer5": CoStGcnBlock(64, 128, A, bn_momentum=bn_mom2, t_padding=4, stride=2),
-                "layer6": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2, t_padding=4),
-                "layer7": CoStGcnBlock(128, 128, A, bn_momentum=bn_mom2, t_padding=4),
-                "layer8": CoStGcnBlock(128, 256, A, bn_momentum=bn_mom3, t_padding=4, stride=2),
-                "layer9": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3, t_padding=4),
-                "layer10": CoStGcnBlock(256, 256, A, bn_momentum=bn_mom3, t_padding=4),
+                "layer1": CoStGcnBlock(C_in, 64, A, padding="equal", window_size=T, residual=False),
+                "layer2": CoStGcnBlock(64, 64, A, padding="equal", window_size=T - 1 * 8),
+                "layer3": CoStGcnBlock(64, 64, A, padding="equal", window_size=T - 2 * 8),
+                "layer4": CoStGcnBlock(64, 64, A, padding="equal", window_size=T - 3 * 8),
+                "layer5": CoStGcnBlock(64, 128, A, padding="equal", window_size=T - 4 * 8, stride=2),
+                "layer6": CoStGcnBlock(128, 128, A, padding="equal", window_size=(T - 4 * 8) / 2 - 1 * 8),
+                "layer7": CoStGcnBlock(128, 128, A, padding="equal", window_size=(T - 4 * 8) / 2 - 2 * 8),
+                "layer8": CoStGcnBlock(128, 256, A, padding="equal", window_size=(T - 4 * 8) / 2 - 3 * 8, stride=2),
+                "layer9": CoStGcnBlock(256, 256, A, padding="equal", window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
+                "layer10": CoStGcnBlock(256, 256, A, padding="equal", window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
             }
         )
         # fmt: on

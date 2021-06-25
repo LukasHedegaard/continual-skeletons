@@ -301,7 +301,7 @@ def test_simple_costgcn():
             output[t * total_stride + wait],
             atol=5e-6,
         )
-        for t in range(wait // 2, (T - wait) // total_stride)
+        for t in range(wait // total_stride, (T - wait) // total_stride)
     ]
 
     assert all(checks)
@@ -343,7 +343,6 @@ def test_costgcn_until_pool():
     reg(sample)
     co(sample)
 
-    # (4 * 5 / 2 + 3 * 4) / 2 + 2 * 4 = 19
     delay = 0
     for i in range(len(co.layers)):
         delay += co.layers[f"layer{i + 1}"].delay

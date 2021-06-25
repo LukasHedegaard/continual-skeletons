@@ -2,10 +2,10 @@ import ride  # isort:skip
 
 import torch.nn as nn
 
-from continual import AvgPoolCo1d
+from continual import AvgPoolCo1d, BatchNormCo2d
 from datasets import datasets
-from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.base import CoStGcnBase, CoStGcnBlock
+from models.coa_gcn.coa_gcn import CoAdaptiveGraphConvolution
 from models.utils import init_weights
 
 
@@ -18,34 +18,34 @@ class CoAGcnMod(
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
-        (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
+        # num_channels, num_frames, num_vertices, num_skeletons
+        (C_in, T, V, S) = self.input_shape
         num_classes = self.num_classes
 
         A = self.graph.A
 
         # Define layers
-        self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
-
-        GraphConv = AdaptiveGraphConvolution
+        self.data_bn = BatchNormCo2d(S * C_in * V, window_size=T)
+        # Pass in precise window-sizes to compensate propperly in BatchNorm modules
+        # fmt: off
         self.layers = nn.ModuleDict(
             {
-                "layer1": CoStGcnBlock(
-                    num_channels, 64, A, GraphConv=GraphConv, residual=False
-                ),
-                "layer2": CoStGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer3": CoStGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer4": CoStGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer5": CoStGcnBlock(64, 128, A, GraphConv=GraphConv, stride=1),
-                "layer6": CoStGcnBlock(128, 128, A, GraphConv=GraphConv),
-                "layer7": CoStGcnBlock(128, 128, A, GraphConv=GraphConv),
-                "layer8": CoStGcnBlock(128, 256, A, GraphConv=GraphConv, stride=1),
-                "layer9": CoStGcnBlock(256, 256, A, GraphConv=GraphConv),
-                "layer10": CoStGcnBlock(256, 256, A, GraphConv=GraphConv),
+                "layer1": CoStGcnBlock(C_in, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T, residual=False),
+                "layer2": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 1 * 8),
+                "layer3": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 2 * 8),
+                "layer4": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 3 * 8),
+                "layer5": CoStGcnBlock(64, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 4 * 8, stride=1),
+                "layer6": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 1 * 8),
+                "layer7": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 2 * 8),
+                "layer8": CoStGcnBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1),
+                "layer9": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
+                "layer10": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
             }
         )
+        # fmt: on
         self.pool_size = hparams.pool_size
         if self.pool_size == -1:
-            self.pool_size = num_frames // self.stride - self.delay_conv_blocks
+            self.pool_size = T // self.stride - self.delay_conv_blocks
         self.pool = AvgPoolCo1d(window_size=self.pool_size)
         self.fc = nn.Linear(256, num_classes)
 
