@@ -14,8 +14,8 @@ DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "agcn/nturgbd60_xview/ntu_cv_agcn_joint-49-29400.pt"),
-    ("xsub", "joint", "agcn/nturgbd60_xsub/ntu_cs_agcn_joint-49-31300.pt"),
+    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
         [
@@ -26,16 +26,16 @@ for subset, modality, pretrained_model in [
             "--gpus",
             "1",
             "--train",
+            "--test",
             "--profile_model",
             "--max_epochs",
             "15",
             "--optimization_metric",
             "top1acc",
-            "--test",
             "--batch_size",
             "12",
             "--num_workers",
-            "8",
+            "12",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -55,17 +55,15 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.04",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            "0.025",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
             "--weight_decay",
             "0.0001",
-            "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
         ]
