@@ -14,8 +14,8 @@ DS_NAME = "ntu120"
 DS_PATH = DATASETS_PATH / "ntu120"
 
 for subset, modality, pretrained_model in [
-    ("xset", "joint", "stgcn/nturgbd120_xset/ntu120_xset_stgcn_joint-37-32338.pt"),
-    ("xsub", "joint", "stgcn/nturgbd120_xsub/ntu120_xsub_stgcn_joint-31-31488.pt"),
+    ("xset", "joint", "models/st_gcn/weights/stgcn_ntu120_xset_joint.pt"),
+    ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu120_xsub_joint.pt"),
 ]:
     subprocess.call(
         [
@@ -24,7 +24,9 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "1",
+            "2",
+            "--distributed_backend",
+            "ddp",
             "--train",
             "--max_epochs",
             "15",
@@ -34,7 +36,7 @@ for subset, modality, pretrained_model in [
             "--batch_size",
             "12",
             "--num_workers",
-            "8",
+            "12",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -54,17 +56,15 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.04",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            "0.05",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
             "--weight_decay",
             "0.0001",
-            "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
         ]
