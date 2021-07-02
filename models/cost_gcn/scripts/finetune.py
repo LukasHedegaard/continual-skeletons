@@ -27,7 +27,7 @@ subprocess.call(
         "clip",
         "--train",
         "--max_epochs",
-        "5",
+        "20",
         "--optimization_metric",
         "top1acc",
         "--test",
@@ -65,7 +65,7 @@ subprocess.call(
         "--unfreeze_layers_initial",
         "-1",
         "--learning_rate",
-        "0.1",  # Apply scaling rule: 0,1 / 64 * 20 * 4 (gpus) = 0,125
+        "0.4",  # Apply scaling rule: 0,1 / 64 * 18 * 4 (gpus) = 0,125
         "--weight_decay",
         "0.0001",
         "--distributed_backend",

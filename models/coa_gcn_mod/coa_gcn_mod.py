@@ -1,18 +1,107 @@
 import ride  # isort:skip
+from contextlib import nullcontext
 
-import torch.nn as nn
+import numpy as np
+import torch
+from torch import Tensor, nn
 
 from continual import AvgPoolCo1d, BatchNormCo2d
+from continual.batchnorm import normalise_momentum
+from continual.utils import temporary_parameter
 from datasets import datasets
 from models.base import CoStGcnBase, CoStGcnBlock
-from models.coa_gcn.coa_gcn import CoAdaptiveGraphConvolution
 from models.utils import init_weights
+
+
+class CoAdaptiveGraphConvolution(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        A,
+        bn_momentum=0.1,
+        coff_embedding=4,
+        window_size=1,
+    ):
+        super(CoAdaptiveGraphConvolution, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.unnormalised_momentum = bn_momentum
+        self.momentum = normalise_momentum(bn_momentum, window_size)
+        inter_channels = out_channels // coff_embedding
+        self.inter_c = inter_channels
+        self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
+        nn.init.constant_(self.graph_attn, 1)
+        self.A = nn.Parameter(
+            torch.from_numpy(A.astype(np.float32)), requires_grad=False
+        )
+        self.num_subset = 3
+        self.g_conv = nn.ModuleList()
+        self.a_conv = nn.ModuleList()
+        self.b_conv = nn.ModuleList()
+        for i in range(self.num_subset):
+            self.g_conv.append(nn.Conv2d(in_channels, out_channels, 1))
+            self.a_conv.append(nn.Conv2d(in_channels, inter_channels, 1))
+            self.b_conv.append(nn.Conv2d(in_channels, inter_channels, 1))
+            init_weights(self.g_conv[i], bs=self.num_subset)
+            init_weights(self.a_conv[i])
+            init_weights(self.b_conv[i])
+
+        if in_channels != out_channels:
+            self.gcn_residual = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 1),
+                nn.BatchNorm2d(out_channels, momentum=self.momentum),
+            )
+            init_weights(self.gcn_residual[0], bs=1)
+            init_weights(self.gcn_residual[1], bs=1)
+        else:
+            self.gcn_residual = lambda x: x
+
+        self.bn = nn.BatchNorm2d(out_channels, momentum=self.momentum)
+        init_weights(self.bn, bs=1e-6)
+        self.relu = nn.ReLU()
+        self.soft = nn.Softmax(-2)
+
+    def forward(self, x):
+        x = x.unsqueeze(dim=2)
+        x = self._forward(x)
+        x = x.squeeze(dim=2)
+        return x
+
+    def forward_regular(self, x: Tensor) -> Tensor:
+        return self.forward_regular_unrolled(x)
+
+    def forward_regular_unrolled(self, x: Tensor) -> Tensor:
+        with temporary_parameter(
+            self.bn, "momentum", self.unnormalised_momentum
+        ), temporary_parameter(
+            self.gcn_residual[-1], "momentum", self.unnormalised_momentum
+        ) if self.in_channels != self.out_channels else nullcontext():
+            x = self._forward(x)
+        return x
+
+    def _forward(self, x: Tensor) -> Tensor:
+        N, C, T, V = x.size()
+        A = self.A + self.graph_attn
+        hidden = None
+        for i in range(self.num_subset):
+            A1 = self.a_conv[i](x).permute(0, 3, 1, 2).contiguous()
+            A2 = self.b_conv[i](x)
+            A1 = self.soft(
+                torch.einsum("nvct,nctw->nvwt", A1, A2) / self.inter_c
+            )  # N V V T
+            A1 = A1 + A[i].unsqueeze(0).unsqueeze(-1)
+            z = self.g_conv[i](torch.einsum("nctv,nvwt->nctv", x, A1))
+            hidden = z + hidden if hidden is not None else z
+        hidden = self.bn(hidden)
+        hidden += self.gcn_residual(x)
+        return self.relu(hidden)
 
 
 class CoAGcnMod(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
-    ride.optimizers.SgdOptimizer,
+    ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
     CoStGcnBase,
 ):

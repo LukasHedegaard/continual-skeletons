@@ -10,12 +10,12 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-DS_NAME = "ntu120"
-DS_PATH = DATASETS_PATH / "ntu120"
+DS_NAME = "ntu60"
+DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xset", "joint", "models/st_gcn/weights/stgcn_ntu120_xset_joint.pt"),
-    ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu120_xsub_joint.pt"),
+    ("xview", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xview_joint.ckpt"),
+    ("xsub", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xsub_joint.ckpt"),
 ]:
     subprocess.call(
         [
@@ -24,12 +24,12 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "2",
+            "4",
             "--distributed_backend",
             "ddp",
             "--train",
             "--max_epochs",
-            "15",
+            "20",
             "--optimization_metric",
             "top1acc",
             "--test",
@@ -57,12 +57,13 @@ for subset, modality, pretrained_model in [
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
             pretrained_model,
+            # str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.05",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            "0.075",  # Linear scaling rule: 0,1 / 64 * 12 * 4
             "--weight_decay",
             "0.0001",
             "--logging_backend",
