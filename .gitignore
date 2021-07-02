@@ -135,3 +135,7 @@ dmypy.json
 logs/
 features/
 .DS_Store
+
+# Queue system
+queue/history/
+queue/next.sh
