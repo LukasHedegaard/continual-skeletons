@@ -91,7 +91,7 @@ class CoAdaptiveGraphConvolution(nn.Module):
                 torch.einsum("nvct,nctw->nvwt", A1, A2) / self.inter_c
             )  # N V V T
             A1 = A1 + A[i].unsqueeze(0).unsqueeze(-1)
-            z = self.g_conv[i](torch.einsum("nctv,nvwt->nctv", x, A1))
+            z = self.g_conv[i](torch.einsum("nctv,nwvt->nctv", x, A1))
             hidden = z + hidden if hidden is not None else z
         hidden = self.bn(hidden)
         hidden += self.gcn_residual(x)
