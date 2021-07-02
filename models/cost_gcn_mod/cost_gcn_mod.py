@@ -12,8 +12,8 @@ from models.utils import init_weights
 
 class CoStGcnMod(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
-    ride.optimizers.SgdOptimizer,
+    ride.TopKAccuracyMetric(1, 3, 5),
+    ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
     CoStGcnBase,
 ):
