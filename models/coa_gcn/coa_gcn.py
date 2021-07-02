@@ -123,10 +123,10 @@ class CoAGcn(
                 "layer2": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=T - 1 * 8),
                 "layer3": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=T - 2 * 8),
                 "layer4": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=T - 3 * 8),
-                "layer5": CoStGcnBlock(64, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=T - 4 * 8, stride=1),
+                "layer5": CoStGcnBlock(64, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=T - 4 * 8, stride=2),
                 "layer6": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=(T - 4 * 8) / 2 - 1 * 8),
                 "layer7": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=(T - 4 * 8) / 2 - 2 * 8),
-                "layer8": CoStGcnBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1),
+                "layer8": CoStGcnBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=(T - 4 * 8) / 2 - 3 * 8, stride=2),
                 "layer9": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
                 "layer10": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding="equal", window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
             }
