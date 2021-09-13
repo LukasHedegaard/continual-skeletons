@@ -5,16 +5,16 @@ import ride  # isort:skip
 import torch.nn as nn
 
 from continual import AvgPoolCo1d, BatchNormCo2d
-from datasets import datasets
+from datasets import GraphDatasets
 from models.base import CoStGcnBase, CoStGcnBlock
 from models.utils import init_weights
 
 
 class CoStGcnMod(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
-    ride.optimizers.SgdOptimizer,
-    datasets.GraphDatasets,
+    ride.TopKAccuracyMetric(1, 3, 5),
+    ride.optimizers.SgdOneCycleOptimizer,
+    GraphDatasets,
     CoStGcnBase,
 ):
     def __init__(self, hparams):
