@@ -126,14 +126,14 @@ class GraphDatasets(RideClassificationDataset):
 
         C_in = self.hparams.dataset_input_channels
         (self.output_shape, self.input_shape, self.graph) = {
-            "dummy": ((3,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
+            "dummy": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "ntu60": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "ntu120": ((120,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "kinetics": ((400,), (C_in, 300, kinetics.NUM_NODES, 2), kinetics.graph),
         }[self.hparams.dataset_name]
 
         self.classes = (
-            ["0", "1", "2"]
+            [str(i) for i in range(self.output_shape[0])]
             if self.hparams.dataset_name == "dummy"
             else ride.utils.io.load_yaml(self.hparams.dataset_classes)
         )
@@ -283,8 +283,8 @@ class DummyDataset(Dataset):
     def __init__(
         self,
         input_shape=(3, 300, ntu_rgbd.NUM_NODES, 2),
-        num_classes=3,
-        num_samples=42,
+        num_classes=60,
+        num_samples=100,
         *args,
         **kwargs
     ):
