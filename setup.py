@@ -29,7 +29,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="cost-gcn",
-    version="0.1.2",
+    version="0.2.0",
     description="Research repository for Continual Spatio-Temporal Graph Convolutional Neural Networks",
     long_description=long_description(),
     long_description_content_type="text/markdown",

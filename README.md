@@ -1,4 +1,4 @@
-# Continual Spatio-Temporal Graph Convolutional Neural Networks
+# Continual Skeletons
 
 <!-- [![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539) -->
 <!-- [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018) -->
@@ -13,20 +13,20 @@ Research repository for Continual Spatio-Temporal Graph Convolutional Neural Net
 ### Installation
 - Clone this repository and enter it: 
     ```bash
-    git clone https://github.com/LukasHedegaard/cost-gcn.git
-    cd cost-gcn
+    git clone https://github.com/LukasHedegaard/continual-skeletons.git
+    cd continual-skeletons
     ```
 - (Optionally) create conda environment:
     ```bash
-    conda create --name cost-gcn python=3.8
+    conda create --name continual-skeletons python=3.8
     ```
 - Install as editable module
     ```bash
-    make install
+    pip install -e .[dev]
     ```
 
 ### Pretrained weights
-Pretrained model weights are available [here](https://drive.google.com/drive/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72?usp=sharing)
+Trained model weights are available [here](https://drive.google.com/drive/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72?usp=sharing).
 
 
 ### Lint
