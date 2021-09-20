@@ -6,7 +6,7 @@ import ride  # isort:skip
 import torch.nn as nn
 
 from datasets import datasets
-from models.base import StGcnBlock
+from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
 
@@ -27,18 +27,20 @@ class StGcnMod(
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
         self.layers = nn.ModuleDict(
             {
-                "layer1": StGcnBlock(
+                "layer1": SpatioTemporalBlock(
                     num_channels, 64, A, residual=False, temporal_padding=0
                 ),
-                "layer2": StGcnBlock(64, 64, A, temporal_padding=0),
-                "layer3": StGcnBlock(64, 64, A, temporal_padding=0),
-                "layer4": StGcnBlock(64, 64, A, temporal_padding=0),
-                "layer5": StGcnBlock(64, 128, A, temporal_padding=0, stride=1),
-                "layer6": StGcnBlock(128, 128, A, temporal_padding=0),
-                "layer7": StGcnBlock(128, 128, A, temporal_padding=0),
-                "layer8": StGcnBlock(128, 256, A, temporal_padding=0, stride=1),
-                "layer9": StGcnBlock(256, 256, A, temporal_padding=0),
-                "layer10": StGcnBlock(256, 256, A, temporal_padding=0),
+                "layer2": SpatioTemporalBlock(64, 64, A, temporal_padding=0),
+                "layer3": SpatioTemporalBlock(64, 64, A, temporal_padding=0),
+                "layer4": SpatioTemporalBlock(64, 64, A, temporal_padding=0),
+                "layer5": SpatioTemporalBlock(64, 128, A, temporal_padding=0, stride=1),
+                "layer6": SpatioTemporalBlock(128, 128, A, temporal_padding=0),
+                "layer7": SpatioTemporalBlock(128, 128, A, temporal_padding=0),
+                "layer8": SpatioTemporalBlock(
+                    128, 256, A, temporal_padding=0, stride=1
+                ),
+                "layer9": SpatioTemporalBlock(256, 256, A, temporal_padding=0),
+                "layer10": SpatioTemporalBlock(256, 256, A, temporal_padding=0),
             }
         )
         self.fc = nn.Linear(256, num_classes)

@@ -40,7 +40,7 @@ def test_StGcnModBlock_residual_eq_channels():
     # Frame-by-frame
     output = []
     for i in range(T):
-        output.append(co.layers.layer1(sample[:, :, i]))
+        output.append(co.layers.layer1.forward_step(sample[:, :, i]))
 
     checks = [
         torch.allclose(
@@ -81,7 +81,7 @@ def test_AGcnMod_dummy_params():
     # Forward
     o_reg = reg(sample)
     o_co1 = co.forward(sample)
-    o_co2 = co.forward_regular_unrolled(sample)
+    o_co2 = co.forward(sample)
 
     assert torch.allclose(o_reg, o_co1, rtol=5e-4)
     assert torch.allclose(o_reg, o_co2, rtol=1e-4)

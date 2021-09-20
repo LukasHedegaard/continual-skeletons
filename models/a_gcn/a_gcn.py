@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from datasets import datasets
-from models.base import StGcnBlock
+from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
 
@@ -103,22 +103,26 @@ class AGcn(
         GraphConv = AdaptiveGraphConvolution
         self.layers = nn.ModuleDict(
             {
-                "layer1": StGcnBlock(
+                "layer1": SpatioTemporalBlock(
                     num_channels,
                     64,
                     A,
                     residual=False,
                     GraphConv=GraphConv,
                 ),
-                "layer2": StGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer3": StGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer4": StGcnBlock(64, 64, A, GraphConv=GraphConv),
-                "layer5": StGcnBlock(64, 128, A, stride=2, GraphConv=GraphConv),
-                "layer6": StGcnBlock(128, 128, A, GraphConv=GraphConv),
-                "layer7": StGcnBlock(128, 128, A, GraphConv=GraphConv),
-                "layer8": StGcnBlock(128, 256, A, stride=2, GraphConv=GraphConv),
-                "layer9": StGcnBlock(256, 256, A, GraphConv=GraphConv),
-                "layer10": StGcnBlock(256, 256, A, GraphConv=GraphConv),
+                "layer2": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv),
+                "layer3": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv),
+                "layer4": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv),
+                "layer5": SpatioTemporalBlock(
+                    64, 128, A, stride=2, GraphConv=GraphConv
+                ),
+                "layer6": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv),
+                "layer7": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv),
+                "layer8": SpatioTemporalBlock(
+                    128, 256, A, stride=2, GraphConv=GraphConv
+                ),
+                "layer9": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv),
+                "layer10": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv),
             }
         )
         self.fc = nn.Linear(256, num_classes)

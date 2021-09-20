@@ -1,3 +1,4 @@
+from typing import OrderedDict
 import ride  # isort:skip
 from contextlib import nullcontext
 
@@ -5,15 +6,15 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 
-from continual import AvgPoolCo1d, BatchNormCo2d
+import continual as co
 from continual.batchnorm import normalise_momentum
-from continual.utils import temporary_parameter
 from datasets import datasets
-from models.base import CoStGcnBase, CoStGcnBlock
+from models.base import CoModelBase, CoSpatioTemporalBlock
 from models.utils import init_weights
 
 
-class CoAdaptiveGraphConvolution(nn.Module):
+class TimeSlicedAdaptiveGraphConvolution(co.CoModule, nn.Module):
+    # Alternative implementation of AdaptiveGraphConvolution, which does not collapse multiple time-steps together.
     def __init__(
         self,
         in_channels,
@@ -21,13 +22,11 @@ class CoAdaptiveGraphConvolution(nn.Module):
         A,
         bn_momentum=0.1,
         coff_embedding=4,
-        window_size=1,
     ):
-        super(CoAdaptiveGraphConvolution, self).__init__()
+        nn.Module.__init__(self)
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.unnormalised_momentum = bn_momentum
-        self.momentum = normalise_momentum(bn_momentum, window_size)
+        self.momentum = bn_momentum
         inter_channels = out_channels // coff_embedding
         self.inter_c = inter_channels
         self.graph_attn = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
@@ -62,25 +61,7 @@ class CoAdaptiveGraphConvolution(nn.Module):
         self.relu = nn.ReLU()
         self.soft = nn.Softmax(-2)
 
-    def forward(self, x):
-        x = x.unsqueeze(dim=2)
-        x = self._forward(x)
-        x = x.squeeze(dim=2)
-        return x
-
-    def forward_regular(self, x: Tensor) -> Tensor:
-        return self.forward_regular_unrolled(x)
-
-    def forward_regular_unrolled(self, x: Tensor) -> Tensor:
-        with temporary_parameter(
-            self.bn, "momentum", self.unnormalised_momentum
-        ), temporary_parameter(
-            self.gcn_residual[-1], "momentum", self.unnormalised_momentum
-        ) if self.in_channels != self.out_channels else nullcontext():
-            x = self._forward(x)
-        return x
-
-    def _forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, *args, **kwargs) -> Tensor:
         N, C, T, V = x.size()
         A = self.A + self.graph_attn
         hidden = None
@@ -97,55 +78,46 @@ class CoAdaptiveGraphConvolution(nn.Module):
         hidden += self.gcn_residual(x)
         return self.relu(hidden)
 
+    def forward_step(self, x: Tensor, update_state=True) -> Tensor:
+        x = x.unsqueeze(2)
+        x = self.forward(x)
+        x = x.squeeze(2)
+        return x
+
+    def forward_steps(self, x: Tensor, pad_end=False, update_state=True) -> Tensor:
+        return self.forward(x)
+
 
 class CoAGcnMod(
     ride.RideModule,
     ride.TopKAccuracyMetric(1),
     ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
-    CoStGcnBase,
+    CoModelBase,
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
         # num_channels, num_frames, num_vertices, num_skeletons
         (C_in, T, V, S) = self.input_shape
-        num_classes = self.num_classes
-
         A = self.graph.A
 
-        # Define layers
-        self.data_bn = BatchNormCo2d(S * C_in * V, window_size=T)
-        # Pass in precise window-sizes to compensate propperly in BatchNorm modules
+        CoGraphConv = TimeSlicedAdaptiveGraphConvolution
         # fmt: off
-        self.layers = nn.ModuleDict(
-            {
-                "layer1": CoStGcnBlock(C_in, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T, residual=False),
-                "layer2": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 1 * 8),
-                "layer3": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 2 * 8),
-                "layer4": CoStGcnBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 3 * 8),
-                "layer5": CoStGcnBlock(64, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 4 * 8, stride=1),
-                "layer6": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 1 * 8),
-                "layer7": CoStGcnBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 2 * 8),
-                "layer8": CoStGcnBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1),
-                "layer9": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8),
-                "layer10": CoStGcnBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8),
-            }
-        )
+        self.layers = co.Sequential(OrderedDict([
+            ("layer1", CoSpatioTemporalBlock(C_in, 64, A, CoGraphConv=CoGraphConv, padding=0, window_size=T, residual=False)),
+            ("layer2", CoSpatioTemporalBlock(64, 64, A, CoGraphConv=CoGraphConv, padding=0, window_size=T - 1 * 8)),
+            ("layer3", CoSpatioTemporalBlock(64, 64, A, CoGraphConv=CoGraphConv, padding=0, window_size=T - 2 * 8)),
+            ("layer4", CoSpatioTemporalBlock(64, 64, A, CoGraphConv=CoGraphConv, padding=0, window_size=T - 3 * 8)),
+            ("layer5", CoSpatioTemporalBlock(64, 128, A, CoGraphConv=CoGraphConv, padding=0, window_size=T - 4 * 8, stride=1)),
+            ("layer6", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoGraphConv, padding=0, window_size=(T - 4 * 8) / 2 - 1 * 8)),
+            ("layer7", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoGraphConv, padding=0, window_size=(T - 4 * 8) / 2 - 2 * 8)),
+            ("layer8", CoSpatioTemporalBlock(128, 256, A, CoGraphConv=CoGraphConv, padding=0, window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1)),
+            ("layer9", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoGraphConv, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8)),
+            ("layer10", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoGraphConv, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8)),
+        ]))
         # fmt: on
-        self.pool_size = hparams.pool_size
-        if self.pool_size == -1:
-            self.pool_size = T // self.stride - self.delay_conv_blocks
-        self.pool = AvgPoolCo1d(window_size=self.pool_size)
-        self.fc = nn.Linear(256, num_classes)
 
-        # Initialize weights
-        init_weights(self.data_bn, bs=1)
-        init_weights(self.fc, bs=num_classes)
-
-        # Defined in CoStGcnBase:
-        # - self.stride
-        # - self.delay_conv_blocks
-        # - self.forward
+        # Other layers defined in CoModelBase.on_init_end
 
 
 if __name__ == "__main__":  # pragma: no cover
