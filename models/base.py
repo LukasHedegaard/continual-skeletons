@@ -1,6 +1,8 @@
-from operator import attrgetter
-from collections import OrderedDict
 import math
+from collections import OrderedDict
+from operator import attrgetter
+from typing import Sequence
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -56,30 +58,29 @@ class CoModelBase(RideMixin, co.Sequential):
         # Shapes from Dataset:
         # num_channels, num_frames, num_vertices, num_skeletons
         (C_in, T, V, S) = self.input_shape
-        N = self.hparams.batch_size
 
         reshape1 = co.Lambda(
-            lambda x: x.permute(0, 3, 2, 1).contiguous().view(N, S * V * C_in),
+            lambda x: x.permute(0, 3, 2, 1).contiguous().view(-1, S * V * C_in),
         )
         data_bn = nn.BatchNorm1d(S * C_in * V)
         reshape2 = co.Lambda(
-            lambda x: x.view(N, S, V, C_in)
+            lambda x: x.view(-1, S, V, C_in)
             .permute(0, 1, 3, 2)
             .contiguous()
-            .view(N * S, C_in, V)
+            .view(-1, C_in, V)
         )
 
         def dummy(x):
             return x
 
-        spatial_pool = co.Lambda(lambda x: x.view(N, S, 256, V).mean(3).mean(1))
+        spatial_pool = co.Lambda(lambda x: x.view(-1, S, 256, V).mean(3).mean(1))
 
         pool_size = self.hparams.pool_size
         if pool_size == -1:
             pool_size = math.ceil(
                 (T - (self.receptive_field - 1) + 2 * self.padding) / self.stride
             )
-        pool = co.AvgPool1d(pool_size)
+        pool = co.AvgPool1d(pool_size, stride=1)
 
         fc = co.Linear(256, self.num_classes, channel_dim=1)
 
@@ -107,11 +108,28 @@ class CoModelBase(RideMixin, co.Sequential):
             ),
         )
 
-        if getattr(self.hparams, "profile_model", False):
+        if (
+            getattr(self.hparams, "profile_model", False)
+            and self.hparams.forward_mode == "frame"
+        ):
             (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
 
             # A new output is created every `self.stride` frames.
             self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
+
+    def warm_up(self, step_shape: Sequence[int]):
+        # Called prior to profiling
+
+        if self.hparams.forward_mode == "clip":
+            return
+
+        self.clean_state()
+        self.call_mode = "forward_steps"
+
+        N, C, T, S, V = step_shape
+        data = torch.randn((N, C, self.receptive_field, S, V)).to(device=self.device)
+
+        self.forward_steps(data)
 
     def validate_attributes(self):
         attrgetter("parameters")(self)
@@ -121,11 +139,11 @@ class CoModelBase(RideMixin, co.Sequential):
         for attribute in [f"layers.layer{i+1}" for i in range(10)]:
             assert issubclass(type(attrgetter(attribute)(self)), torch.nn.Module)
 
-    def load_state_dict(
+    def map_state_dict(
         self,
         state_dict: "OrderedDict[str, Tensor]",
         strict: bool = True,
-    ):
+    ) -> "OrderedDict[str, Tensor]":
         def map_key(k: str):
             # Handle "layers.layer2.0.1.gcn.g_conv.0.weight" -> "layers.layer2.gcn.g_conv.0.weight"
             k = k.replace("0.1.", "")
@@ -145,106 +163,18 @@ class CoModelBase(RideMixin, co.Sequential):
                     if strict or k in short2long
                 ]
             )
+        return state_dict
 
+    def load_state_dict(
+        self,
+        state_dict: "OrderedDict[str, Tensor]",
+        strict: bool = True,
+    ):
+        state_dict = self.map_state_dict(state_dict, strict)
         return nn.Module.load_state_dict(self, state_dict, strict)
 
-    # def __call__(self, x: Tensor) -> Tensor:
-    #     result = None
-    #     if self.hparams.forward_mode == "clip" and self.training:
-    #         result = self.forward_regular_unrolled(x)
-    #     elif self.hparams.forward_mode == "clip" and not self.training:
-    #         result = self.forward_regular_naive(x)
-    #     elif self.hparams.forward_mode == "frame":
-    #         result = self.forward_frame(x[:, :, 0])
-    #     else:  # pragma: no cover
-    #         raise RuntimeError("Model forward_mode should be one of {'clip', 'frame'}.")
-    #     return result
-
-    # def _forward_steps(self, x: Tensor) -> Tensor:
-    #     """Efficient version of forward regular.
-    #     Compute features layer by layer as in regular convolution.
-    #     Produce prediction corresponding to last frame.
-    #     """
-    #     self.clean_state()
-
-    #     N, C, T, V, M = x.shape
-    #     x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-
-    #     x = torch.stack(
-    #         [
-    #             self.data_bn(x[:, :, i])
-    #             .view(N, M, V, C)
-    #             .permute(0, 1, 3, 2)
-    #             .contiguous()
-    #             .view(N * M, C, V)
-    #             for i in range(T)
-    #         ],
-    #         dim=2,
-    #     )
-
-    #     for i in range(len(self.layers)):
-    #         x = self.layers[f"layer{i + 1}"].forward_steps(x)
-    #         # Discard frames from transient response
-    #         discard = (
-    #             self.layers[f"layer{i + 1}"].delay
-    #             // self.layers[f"layer{i + 1}"].stride
-    #         )
-    #         x = x[:, :, discard:]
-
-    #     # N*M, C, T, V
-    #     _, C_new, T_new, _ = x.shape
-    #     x = x.view(N, M, C_new, -1, V).mean(4).mean(1)
-    #     assert self.pool.window_size == T_new
-    #     x = [self.pool(x[:, :, t]) for t in range(T_new)]
-    #     d = self.hparams.predict_after_frames - self.delay_conv_blocks
-    #     i = d if d > 0 else -1
-    #     x = self.fc(x[i])
-    #     self.last_output = x
-    #     return self.last_output
-
-    # def _forward(self, x: Tensor) -> Tensor:
-    #     """Clip-wise forward without state initialisation, but which is identical to the non-continual component
-
-    #     Args:
-    #         x (Tensor): Input Tensor
-
-    #     Returns:
-    #         Tensor: Output Tensor
-    #     """
-    #     N, C, T, V, M = x.size()
-    #     x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-    #     x = self.data_bn.forward(x)
-    #     x = (
-    #         x.view(N, M, V, C, T)
-    #         .permute(0, 1, 3, 4, 2)
-    #         .contiguous()
-    #         .view(N * M, C, T, V)
-    #     )
-    #     x = self.layers.forward(x)
-    #     # N*M,C,T,V
-    #     c_new = x.size(1)
-    #     x = x.view(N, M, c_new, -1)
-    #     x = x.mean(3).mean(1)
-    #     x = self.fc(x)
-    #     return x
-
-    # def _forward_step(self, x: Tensor) -> Tensor:
-    #     self.clean_state_on_shape_change(x.shape)
-    #     N, C, V, M = x.shape
-    #     x = x.permute(0, 3, 2, 1).contiguous().view(N, M * V * C, 1)
-    #     x = self.data_bn.forward(x)
-    #     x = x.view(N, M, V, C).permute(0, 1, 3, 2).contiguous().view(N * M, C, V)
-    #     for i in range(len(self.layers)):
-    #         x = self.layers[f"layer{i + 1}"].forward_step(x)
-    #         if isinstance(x, co.TensorPlaceholder):
-    #             return self.last_output
-    #     # N*M,C,V
-    #     C_new = x.size(1)
-    #     x = x.view(N, M, C_new, V).mean(3).mean(1)
-    #     x = self.pool(x)
-    #     x = self.fc(x)
-    #     self.last_output = x
-    #     return x
+    def map_loaded_weights(self, file, loaded_state_dict):
+        return self.map_state_dict(loaded_state_dict)
 
     def clean_state_on_shape_change(self, shape):
         if not hasattr(self, "_current_input_shape"):
