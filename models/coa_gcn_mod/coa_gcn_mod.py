@@ -1,13 +1,11 @@
+import ride  # isort: skip
 from typing import OrderedDict
-import ride  # isort:skip
-from contextlib import nullcontext
 
 import numpy as np
 import torch
 from torch import Tensor, nn
 
 import continual as co
-from continual.batchnorm import normalise_momentum
 from datasets import datasets
 from models.base import CoModelBase, CoSpatioTemporalBlock
 from models.utils import init_weights

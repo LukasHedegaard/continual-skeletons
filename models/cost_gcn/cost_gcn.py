@@ -3,10 +3,11 @@ Modified based on: https://github.com/open-mmlab/mmskeleton
 """
 import ride  # isort:skip
 
+from collections import OrderedDict
+
 import continual as co
 from datasets import datasets
 from models.base import CoModelBase, CoSpatioTemporalBlock
-from collections import OrderedDict
 
 
 class CoStGcn(

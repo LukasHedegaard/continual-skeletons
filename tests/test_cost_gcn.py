@@ -1,5 +1,8 @@
-import torch
 from collections import OrderedDict
+
+import torch
+
+import continual
 from datasets import ntu_rgbd
 from models.base import (
     CoSpatioTemporalBlock,
@@ -7,7 +10,6 @@ from models.base import (
     SpatioTemporalBlock,
     TemporalConvolution,
 )
-import continual
 from models.cost_gcn.cost_gcn import CoStGcn
 from models.st_gcn.st_gcn import StGcn
 
@@ -24,9 +26,8 @@ def test_forward_shapes():
     hparams["dataset_name"] = "dummy"
     net = CoStGcn(hparams)
 
-    sample = torch.rand((hparams["batch_size"], *net.input_shape))
-    sample2 = next(iter(net.train_dataloader()))
-    output = net.forward(sample2)
+    sample = next(iter(net.train_dataloader()))
+    output = net.forward(sample)
 
     assert output.shape == (hparams["batch_size"], *net.output_shape)
 

@@ -1,3 +1,6 @@
+import ride  # isort:skip
+from collections import OrderedDict
+
 from torch import nn
 
 import continual as co
@@ -5,9 +8,6 @@ from datasets import datasets
 from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.base import CoModelBase, CoSpatioTemporalBlock
 from models.utils import init_weights
-from collections import OrderedDict
-
-import ride  # isort:skip
 
 
 class CoAGcn(
