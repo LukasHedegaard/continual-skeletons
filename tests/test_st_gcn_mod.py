@@ -60,6 +60,7 @@ def dummy_hparams():
     d["max_epochs"] = 1
     d["batch_size"] = 2
     d["dataset_name"] = "dummy"
+    d["accumulate_grad_batches"] = 1
     return d
 
 

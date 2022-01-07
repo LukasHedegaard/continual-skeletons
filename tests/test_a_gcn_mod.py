@@ -59,6 +59,7 @@ def dummy_hparams():
     d["max_epochs"] = 1
     d["batch_size"] = 2
     d["dataset_name"] = "dummy"
+    d["accumulate_grad_batches"] = 1
     return d
 
 
@@ -167,3 +168,5 @@ def test_AGcnMod_real_params():
     # Conclusion: The matmul(A1, A2) yields an attn matrix over all vertices
     # Since it accounts for all timesteps, it cannot be made continual :-(
     # A1 = self.soft(torch.matmul(A1, A2) / A1.size(-1))  # N V V
+
+

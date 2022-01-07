@@ -7,6 +7,7 @@ def default_hparams():
     d = StGcn.configs().default_values()
     d["max_epochs"] = 1
     d["batch_size"] = 2
+    d["accumulate_grad_batches"] = 1
     return d
 
 
