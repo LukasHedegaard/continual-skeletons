@@ -1,57 +1,58 @@
 import pytest
 import torch
 
+from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.a_gcn_mod.a_gcn_mod import AGcnMod
-from models.coa_gcn_mod.coa_gcn_mod import CoAGcnMod
+from models.coa_gcn_mod.coa_gcn_mod import CoAGcnMod, TimeSlicedAdaptiveGraphConvolution
+from datasets.ntu_rgbd import graph
+import continual as co
 
+def test_TimeSlicedAdaptiveGraphConvolution():
+    SEQ_LEN=4
+    BATCH_SIZE=2
+    VERTICES=25
+    IN_CHANNELS=3
+    OUT_CHANNELS=4
+    A=graph.A
 
-def test_StGcnModBlock_residual_eq_channels():
-    hparams = dummy_hparams()
-    reg = AGcnMod(hparams)
-    co = CoAGcnMod(hparams)
+    agc = co.forward_stepping(AdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A))
+    
+    tsagc = TimeSlicedAdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A)
 
     #  Transfer weights
-    state_dict = reg.state_dict()
-    co.load_state_dict(state_dict)
+    state_dict = agc.state_dict()
+    tsagc.load_state_dict(state_dict)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
-    reg.eval()
-    co.eval()
+    agc.eval()
+    tsagc.eval()
 
-    # Prepare data
-    sample = next(iter(reg.train_dataloader()))
-    N, C, T, V, M = sample.size()
-    sample = sample.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-    sample = reg.data_bn(sample)
-    sample = (
-        sample.view(N, M, V, C, T)
-        .permute(0, 1, 3, 4, 2)
-        .contiguous()
-        .view(N * M, C, T, V)
-    )
+    # Prepare sample
+    sample_all = torch.randn(BATCH_SIZE, IN_CHANNELS, SEQ_LEN, VERTICES)
+    sample_step0 = sample_all[:,:,0]
+    sample_step1 = sample_all[:,:,1]
 
-    T = sample.shape[2]
-    kernel_size = 9
-    pad = reg.layers.layer1.tcn.padding
+    # Reg
+    all_steps_agc = agc.forward(sample_all)
+    step0_agc = agc.forward_step(sample_step0)
+    step1_agc = agc.forward_step(sample_step1)
 
-    # Forward
-    target = reg.layers.layer1(sample)
+    assert torch.allclose(all_steps_agc[:,:,0], step0_agc, atol=1e-5)
+    assert torch.allclose(all_steps_agc[:,:,1], step1_agc, atol=1e-5)
 
-    # Frame-by-frame
-    output = []
-    for i in range(T):
-        output.append(co.layers.layer1.forward_step(sample[:, :, i]))
+    # TimeSliced
+    all_steps_tsagc = tsagc.forward(sample_all)
+    step0_tsagc = tsagc.forward_step(sample_step0)
+    step1_tsagc = tsagc.forward_step(sample_step1)
 
-    checks = [
-        torch.allclose(
-            target[:, :, t],
-            output[t + (kernel_size - 1 - pad)],
-            atol=5e-5,
-        )
-        for t in range(pad, T - (kernel_size - 1))
-    ]
+    assert torch.equal(all_steps_tsagc[:,:,0], step0_tsagc)  # Equal!
+    assert torch.equal(all_steps_tsagc[:,:,1], step1_tsagc)  # Equal!
 
-    assert all(checks)
+    # Compare regular with time-sliced
+    assert torch.allclose(step0_agc, step0_tsagc, atol=5e-4)
+    assert torch.allclose(step1_agc, step1_tsagc, atol=5e-4)
+    assert torch.allclose(all_steps_agc, all_steps_tsagc, atol=5e-4)
+
 
 
 def dummy_hparams():
