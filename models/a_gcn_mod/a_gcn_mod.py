@@ -7,7 +7,7 @@ import torch.nn as nn
 from datasets import datasets
 from models.base import SpatioTemporalBlock
 from models.utils import init_weights
-
+from models.coa_gcn_mod.coa_gcn_mod import TimeSlicedAdaptiveGraphConvolution
 
 class AdaptiveGraphConvolutionMod(nn.Module):
     def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, coff_embedding=4):
@@ -81,7 +81,7 @@ class AGcnMod(
         # Define layers
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
 
-        GraphConv = AdaptiveGraphConvolutionMod
+        GraphConv = TimeSlicedAdaptiveGraphConvolution
         # fmt: off
         self.layers = nn.ModuleDict(
             {
