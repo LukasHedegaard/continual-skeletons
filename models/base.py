@@ -217,14 +217,14 @@ class GraphConvolution(nn.Module):
     def forward(self, x):
         N, C, T, V = x.size()
         A = self.A * self.graph_attn
-        hidden_ = None
+        sum_ = None
         for i in range(self.num_subset):
             x_a = x.view(N, C * T, V)
             z = self.g_conv[i](torch.matmul(x_a, A[i]).view(N, C, T, V))
-            hidden_ = z + hidden_ if hidden_ is not None else z
-        hidden_ = self.bn(hidden_)
-        hidden_ += self.gcn_residual(x)
-        return self.relu(hidden_)
+            sum_ = z + sum_ if sum_ is not None else z
+        sum_ = self.bn(sum_)
+        sum_ += self.gcn_residual(x)
+        return self.relu(sum_)
 
 
 def CoGraphConvolution(in_channels, out_channels, A, bn_momentum=0.1):
