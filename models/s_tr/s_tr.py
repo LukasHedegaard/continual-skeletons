@@ -1,8 +1,10 @@
 """
-Modified based on: https://github.com/open-mmlab/mmskeleton
+Modified based on: https://github.com/Chiaraplizz/ST-TR
 """
 import ride  # isort:skip
+import math
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -127,7 +129,7 @@ class SpatialAttention(nn.Module):
                     torch.randn((1, self.dk // self.Nh), requires_grad=True)
                 )
 
-    def forward(self, x, label, name):
+    def forward(self, x):
         # Input x
         # (batch_size, channels, 1, joints)
         B, _, T, V = x.size()
@@ -166,7 +168,7 @@ class SpatialAttention(nn.Module):
 
         # Drop connect implementation to avoid overfitting
         if self.drop_connect and self.training:
-            mask = torch.bernoulli((0.5) * torch.ones(B * self.Nh * V, device=device))
+            mask = torch.bernoulli((0.5) * torch.ones(B * self.Nh * V, device=x.device))
             mask = mask.reshape(B, self.Nh, V).unsqueeze(2).expand(B, self.Nh, V, V)
             weights = weights * mask
             weights = weights / (weights.sum(3, keepdim=True) + 1e-8)
@@ -288,6 +290,188 @@ class SpatialAttention(nn.Module):
         return final_x
 
 
+def conv_init(module):
+    # he_normal
+    n = module.out_channels
+    for k in module.kernel_size:
+        n = n * k
+    module.weight.data.normal_(0, math.sqrt(2.0 / n))
+
+
+class GcnUnitAttention(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        A,
+        num=4,
+        dv_factor=0.25,
+        dk_factor=0.25,
+        Nh=8,
+        complete=True,
+        relative=False,
+        only_attention=True,
+        layer=0,
+        more_channels=False,
+        drop_connect=True,
+        data_normalization=True,
+        skip_conn=True,
+        adjacency=False,
+        num_point=25,
+        padding=0,
+        kernel_size=1,
+        stride=1,
+        bn_flag=True,
+        t_dilation=1,
+        last_graph=False,
+        visualization=True,
+    ):
+        super().__init__()
+        self.relu = nn.ReLU()
+        self.visualization = visualization
+        self.in_channels = in_channels
+        self.more_channels = more_channels
+        self.drop_connect = drop_connect
+        self.data_normalization = data_normalization
+        self.skip_conn = skip_conn
+        self.num_point = num_point
+        self.adjacency = adjacency
+        # print("Nh ", Nh)
+        # print("Dv ", dv_factor)
+        # print("Dk ", dk_factor)
+
+        self.last_graph = last_graph
+        if not only_attention:
+            self.out_channels = out_channels - int((out_channels) * dv_factor)
+        else:
+            self.out_channels = out_channels
+        self.data_bn = nn.BatchNorm1d(self.in_channels * self.num_point)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.only_attention = only_attention
+        self.bn_flag = bn_flag
+        self.layer = layer
+
+        self.A = nn.Parameter(torch.from_numpy(A.astype(np.float32)))
+
+        # Each Conv2d unit implements 2d convolution to weight every single partition (filter size 1x1)
+        # There is a convolutional unit for each partition
+        # This is done only in the case in which Spatial Transformer and Graph Convolution are concatenated
+
+        if not self.only_attention:
+            self.g_convolutions = nn.ModuleList(
+                [
+                    nn.Conv2d(
+                        in_channels,
+                        self.out_channels,
+                        kernel_size=(kernel_size, 1),
+                        padding=(padding, 0),
+                        stride=(stride, 1),
+                        dilation=(t_dilation, 1),
+                    )
+                    for i in range(self.A.size()[0])
+                ]
+            )
+            for conv in self.g_convolutions:
+                conv_init(conv)
+
+            self.attention_conv = SpatialAttention(
+                in_channels=self.in_channels,
+                kernel_size=1,
+                dk=int(out_channels * dk_factor),
+                dv=int(out_channels * dv_factor),
+                Nh=Nh,
+                complete=complete,
+                relative=relative,
+                stride=stride,
+                layer=self.layer,
+                A=self.A,
+                num=num,
+                more_channels=self.more_channels,
+                drop_connect=self.drop_connect,
+                data_normalization=self.data_normalization,
+                skip_conn=self.skip_conn,
+                adjacency=self.adjacency,
+                visualization=self.visualization,
+                num_point=self.num_point,
+            )
+        else:
+            self.attention_conv = SpatialAttention(
+                in_channels=self.in_channels,
+                kernel_size=1,
+                dk=int(out_channels * dk_factor),
+                dv=int(out_channels),
+                Nh=Nh,
+                complete=complete,
+                relative=relative,
+                stride=stride,
+                last_graph=self.last_graph,
+                layer=self.layer,
+                A=self.A,
+                num=num,
+                more_channels=self.more_channels,
+                drop_connect=self.drop_connect,
+                data_normalization=self.data_normalization,
+                skip_conn=self.skip_conn,
+                adjacency=self.adjacency,
+                visualization=self.visualization,
+                num_point=self.num_point,
+            )
+
+    def forward(self, x):
+        # N: number of samples, equal to the batch size
+        # C: number of channels, in our case 3 (coordinates x, y, z)
+        # T: number of frames
+        # V: number of nodes
+        N, C, T, V = x.size()
+        x_sum = x
+        if self.data_normalization:
+            x = x.permute(0, 1, 3, 2).reshape(N, C * V, T)
+            x = self.data_bn(x)
+            x = x.reshape(N, C, V, T).permute(0, 1, 3, 2)
+
+        # Learnable parameter
+        A = self.A
+
+        # N, T, C, V > NT, C, 1, V
+        xa = x.permute(0, 2, 1, 3).reshape(-1, C, 1, V)
+
+        # Spatial Transformer
+        attn_out = self.attention_conv(xa)
+        # N, T, C, V > N, C, T, V
+        attn_out = attn_out.reshape(N, T, -1, V).permute(0, 2, 1, 3)
+
+        if not self.only_attention:
+
+            # For each partition multiplies for the input and applies convolution 1x1 to the result to weight each partition
+            for i, partition in enumerate(A):
+                # print(partition)
+                # NCTxV
+                xp = x.reshape(-1, V)
+                # (NCTxV)*(VxV)
+                xp = xp.mm(partition.float())
+                # NxCxTxV
+                xp = xp.reshape(N, C, T, V)
+
+                if i == 0:
+                    y = self.g_convolutions[i](xp)
+                else:
+                    y = y + self.g_convolutions[i](xp)
+
+            # Concatenate on the channel dimension the two convolutions
+            y = torch.cat((y, attn_out), dim=1)
+        else:
+            if self.skip_conn and self.in_channels == self.out_channels:
+                y = attn_out + x_sum
+            else:
+                y = attn_out
+        if self.bn_flag:
+            y = self.bn(y)
+
+        y = self.relu(y)
+
+        return y
+
+
 class STr(
     ride.RideModule,
     ride.TopKAccuracyMetric(1, 5),
@@ -307,20 +491,22 @@ class STr(
 
         # Define layers
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
+        # fmt: off
         self.layers = nn.ModuleDict(
             {
                 "layer1": SpatioTemporalBlock(num_channels, 64, A, residual=False),
                 "layer2": SpatioTemporalBlock(64, 64, A),
                 "layer3": SpatioTemporalBlock(64, 64, A),
-                "layer4": SpatioTemporalBlock(64, 64, A),
-                "layer5": SpatioTemporalBlock(64, 128, A, stride=2),
-                "layer6": SpatioTemporalBlock(128, 128, A),
-                "layer7": SpatioTemporalBlock(128, 128, A),
-                "layer8": SpatioTemporalBlock(128, 256, A, stride=2),
-                "layer9": SpatioTemporalBlock(256, 256, A),
-                "layer10": SpatioTemporalBlock(256, 256, A),
+                "layer4": SpatioTemporalBlock(64, 64, A, GraphConv=GcnUnitAttention),
+                "layer5": SpatioTemporalBlock(64, 128, A, GraphConv=GcnUnitAttention, stride=2),
+                "layer6": SpatioTemporalBlock(128, 128, A, GraphConv=GcnUnitAttention),
+                "layer7": SpatioTemporalBlock(128, 128, A, GraphConv=GcnUnitAttention),
+                "layer8": SpatioTemporalBlock(128, 256, A, GraphConv=GcnUnitAttention, stride=2),
+                "layer9": SpatioTemporalBlock(256, 256, A, GraphConv=GcnUnitAttention),
+                "layer10": SpatioTemporalBlock(256, 256, A, GraphConv=GcnUnitAttention),
             }
         )
+        # fmt: on
         self.fc = nn.Linear(256, num_classes)
 
         # Initialize weights
