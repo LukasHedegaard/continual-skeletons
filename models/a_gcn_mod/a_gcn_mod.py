@@ -8,6 +8,7 @@ from datasets import datasets
 from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
+
 class AdaptiveGraphConvolutionMod(nn.Module):
     def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, coff_embedding=4):
         super(AdaptiveGraphConvolutionMod, self).__init__()
