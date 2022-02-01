@@ -325,6 +325,8 @@ class GcnUnitAttention(nn.Module):
         t_dilation=1,
         last_graph=False,
         visualization=True,
+        *args,
+        **kwargs,
     ):
         super().__init__()
         self.relu = nn.ReLU()
