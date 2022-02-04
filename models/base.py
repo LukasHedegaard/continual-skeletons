@@ -12,6 +12,9 @@ from torch import Tensor
 import continual as co
 from models.utils import init_weights, unity, zero
 
+from ride import getLogger
+
+logger = getLogger(__name__)
 
 class CoModelBase(RideMixin, co.Sequential):
 
@@ -26,7 +29,7 @@ class CoModelBase(RideMixin, co.Sequential):
             default="clip",
             choices=["clip", "frame"],
             strategy="choice",
-            description="Run forward on a whole clip or a single frame.",
+            description="Run forward on a whole clip or frame-wise.",
         )
         c.add(
             name="predict_after_frames",
@@ -108,6 +111,11 @@ class CoModelBase(RideMixin, co.Sequential):
             ),
         )
 
+        if self.hparams.forward_mode == "frame":
+            self.call_mode = "forward_steps"  # Set continual forward mode
+
+        logger.info(f"Using Continual {self.call_mode}")
+
         if (
             getattr(self.hparams, "profile_model", False)
             and self.hparams.forward_mode == "frame"
@@ -124,7 +132,6 @@ class CoModelBase(RideMixin, co.Sequential):
             return
 
         self.clean_state()
-        self.call_mode = "forward_steps"
 
         N, C, T, S, V = step_shape
         data = torch.randn((N, C, self.receptive_field, S, V)).to(device=self.device)
