@@ -12,14 +12,8 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / "ntu60"
-
 BATCH_SIZE="1"
 GPUS="1"  # 0 if CPU
-
-SUBSET="xview"
-MODALITY="joint"
 
 # Regular models
 for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_mod"]:
@@ -28,7 +22,7 @@ for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_m
             "python3",
             f"models/{model_name}/{model_name}.py",
             "--id",
-            f"{DS_NAME}_benchmark_{'GPU' if GPUS=='1' else 'CPU'}",
+            f"benchmark_{'GPU' if GPUS=='1' else 'CPU'}",
             "--gpus",
             GPUS,
             "--profile_model",
@@ -37,21 +31,7 @@ for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_m
             "--num_workers",
             BATCH_SIZE ,
             "--dataset_name",
-            DS_NAME,
-            "--dataset_classes",
-            str(DS_PATH / "classes.yaml"),
-            "--dataset_train_data",
-            str(DS_PATH / SUBSET / f"train_data_{MODALITY}.npy"),
-            "--dataset_val_data",
-            str(DS_PATH / SUBSET / f"val_data_{MODALITY}.npy"),
-            "--dataset_test_data",
-            str(DS_PATH / SUBSET / f"val_data_{MODALITY}.npy"),
-            "--dataset_train_labels",
-            str(DS_PATH / SUBSET / "train_label.pkl"),
-            "--dataset_val_labels",
-            str(DS_PATH / SUBSET / "val_label.pkl"),
-            "--dataset_test_labels",
-            str(DS_PATH / SUBSET / "val_label.pkl"),
+            "dummy",
             "--logging_backend",
             "wandb",
         ]
@@ -64,7 +44,7 @@ for model_name in ["coa_gcn", "coa_gcn_mod", "cos_tr", "cos_tr_mod", "cost_gcn",
             "python3",
             f"models/{model_name}/{model_name}.py",
             "--id",
-            f"{DS_NAME}_benchmark_{'GPU' if GPUS=='1' else 'CPU'}",
+            f"benchmark_{'GPU' if GPUS=='1' else 'CPU'}",
             "--gpus",
             GPUS,
             "--profile_model",
@@ -75,21 +55,7 @@ for model_name in ["coa_gcn", "coa_gcn_mod", "cos_tr", "cos_tr_mod", "cost_gcn",
             "--num_workers",
             BATCH_SIZE ,
             "--dataset_name",
-            DS_NAME,
-            "--dataset_classes",
-            str(DS_PATH / "classes.yaml"),
-            "--dataset_train_data",
-            str(DS_PATH / SUBSET / f"train_data_{MODALITY}.npy"),
-            "--dataset_val_data",
-            str(DS_PATH / SUBSET / f"val_data_{MODALITY}.npy"),
-            "--dataset_test_data",
-            str(DS_PATH / SUBSET / f"val_data_{MODALITY}.npy"),
-            "--dataset_train_labels",
-            str(DS_PATH / SUBSET / "train_label.pkl"),
-            "--dataset_val_labels",
-            str(DS_PATH / SUBSET / "val_label.pkl"),
-            "--dataset_test_labels",
-            str(DS_PATH / SUBSET / "val_label.pkl"),
+            "dummy",
             "--logging_backend",
             "wandb",
         ]
