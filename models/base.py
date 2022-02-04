@@ -16,6 +16,7 @@ from ride import getLogger
 
 logger = getLogger(__name__)
 
+
 class CoModelBase(RideMixin, co.Sequential):
 
     hparams: ...
@@ -134,7 +135,8 @@ class CoModelBase(RideMixin, co.Sequential):
         self.clean_state()
 
         N, C, T, S, V = step_shape
-        data = torch.randn((N, C, self.receptive_field, S, V)).to(device=self.device)
+        init_frames = self.receptive_field - self.padding - 1
+        data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
 
         self.forward_steps(data)
 
@@ -395,7 +397,7 @@ def CoSpatioTemporalBlock(
     phantom_padding = tcn.receptive_field - 2 * tcn.padding != 1
 
     delay = tcn.delay
-    if phantom_padding:
+    if not phantom_padding:
         delay = delay // 2
 
     return co.Sequential(
