@@ -10,7 +10,6 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
@@ -27,9 +26,9 @@ for subset, modality, pretrained_model in [
             "--id",
             f"eval_{DS_NAME}_{subset}_{modality}",
             "--gpus",
-            GPUS,
+            "1",
             "--forward_mode",
-            "clip",
+            "frame",
             "--profile_model",
             "--test",
             "--batch_size",

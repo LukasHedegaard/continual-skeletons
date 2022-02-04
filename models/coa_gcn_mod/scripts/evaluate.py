@@ -13,13 +13,12 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "joint", "models/a_gcn_mod/weights/acgnmod_ntu60_xview_joint.ckpt"),
+    ("xsub", "joint", "models/a_gcn_mod/weights/acgnmod_ntu60_xsub_joint.ckpt"),
 ]:
     subprocess.call(
         [
@@ -28,13 +27,13 @@ for subset, modality, pretrained_model in [
             "--id",
             f"eval_{DS_NAME}_{subset}_{modality}_agcnmod_weights",
             "--gpus",
-            GPUS,
+            "1",
             "--forward_mode",
-            "clip",
+            "frame",
             "--test",
             "--profile_model",
             "--batch_size",
-            "128",
+            "32",
             "--num_workers",
             "8",
             "--dataset_normalization",

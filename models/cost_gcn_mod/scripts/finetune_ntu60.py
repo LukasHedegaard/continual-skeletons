@@ -10,32 +10,33 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
 DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / DS_NAME
-
+DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "agcn/nturgbd60_cv/ntu_cv_agcn_joint-49-29400.pt"),
-    ("xsub", "joint", "agcn/nturgbd60_cs/ntu_cs_agcn_joint-49-31300.pt"),
+    ("xview", "joint", "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
+    # ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu60_xsub_joint.pt"),
 ]:
-
     subprocess.call(
         [
             "python3",
-            "models/coa_gcn/coa_gcn.py",
+            "models/cost_gcn_mod/cost_gcn_mod.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            GPUS,
-            "--forward_mode",
-            "frame",
-            "--profile_model",
+            "4",
+            "--distributed_backend",
+            "ddp",
+            "--train",
+            "--max_epochs",
+            "20",
+            "--optimization_metric",
+            "top1acc",
             "--test",
             "--batch_size",
-            "128",
+            "12",
             "--num_workers",
-            "8",
+            "12",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -55,10 +56,16 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
+            "--unfreeze_from_epoch",
+            "0",
+            "--unfreeze_layers_initial",
+            "-1",
+            "--learning_rate",
+            "0.025",  # Linear scaling rule: 0,1 / 64 * 12 * 4 = 0.075
+            "--weight_decay",
+            "0.0001",
             "--logging_backend",
             "wandb",
-            "--pool_size",
-            "56",
         ]
     )

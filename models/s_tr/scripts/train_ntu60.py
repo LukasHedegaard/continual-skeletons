@@ -15,7 +15,7 @@ DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality in [
     ("xview", "joint"),
-    ("xsub", "joint"),
+    # ("xsub", "joint"),
 ]:
     subprocess.call(
         [
@@ -25,13 +25,11 @@ for subset, modality in [
             f"{DS_NAME}_{subset}_{modality}_train",
             "--gpus",
             "1",
-            # "--distributed_backend",
-            # "ddp",
             "--train",
             "--test",
             "--profile_model",
             "--max_epochs",
-            "40",
+            "50",
             "--optimization_metric",
             "top1acc",
             "--batch_size",
@@ -61,7 +59,7 @@ for subset, modality in [
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.02",  # Linear scaling rule from lr 0.1 @ bs 64
+            "0.15",  # Linear scaling rule from lr 0.1 @ bs 8
             "--weight_decay",
             "0.0001",
             "--logging_backend",

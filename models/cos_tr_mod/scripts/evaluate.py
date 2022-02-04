@@ -29,7 +29,7 @@ for subset, modality, pretrained_model in [
             "--gpus",
             GPUS,
             "--forward_mode",
-            "clip",
+            "frame",
             "--profile_model",
             "--test",
             "--batch_size",

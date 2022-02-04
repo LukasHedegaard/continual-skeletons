@@ -16,18 +16,18 @@ DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
     ("xview", "joint", "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
-    # ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu60_xsub_joint.pt"),
+    ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
         [
             "python3",
             "models/cost_gcn/cost_gcn.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"eval_{DS_NAME}_{subset}_{modality}_after_refactor_no_pool_specified",
             "--gpus",
             GPUS,
             "--forward_mode",
-            "clip",
+            "frame",
             "--test",
             "--profile_model",
             "--batch_size",
@@ -56,7 +56,5 @@ for subset, modality, pretrained_model in [
             pretrained_model,
             "--logging_backend",
             "wandb",
-            "--pool_size",
-            "56",
         ]
     )
