@@ -12,8 +12,8 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-BATCH_SIZE="1"
-GPUS="1"  # 0 if CPU
+BATCH_SIZE = "1"
+GPUS = "1"  # 0 if CPU
 
 # Regular models
 for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_mod"]:
@@ -26,10 +26,12 @@ for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_m
             "--gpus",
             GPUS,
             "--profile_model",
+            "--profile_model_num_runs",
+            "100",
             "--batch_size",
             BATCH_SIZE,
             "--num_workers",
-            BATCH_SIZE ,
+            BATCH_SIZE,
             "--dataset_name",
             "dummy",
             "--logging_backend",
@@ -38,7 +40,14 @@ for model_name in ["a_gcn", "a_gcn_mod", "s_tr", "s_tr_mod", "st_gcn", "st_gcn_m
     )
 
 # Continual models
-for model_name in ["coa_gcn", "coa_gcn_mod", "cos_tr", "cos_tr_mod", "cost_gcn", "cost_gcn_mod"]:
+for model_name in [
+    "coa_gcn",
+    "coa_gcn_mod",
+    "cos_tr",
+    "cos_tr_mod",
+    "cost_gcn",
+    "cost_gcn_mod",
+]:
     subprocess.call(
         [
             "python3",
@@ -48,12 +57,14 @@ for model_name in ["coa_gcn", "coa_gcn_mod", "cos_tr", "cos_tr_mod", "cost_gcn",
             "--gpus",
             GPUS,
             "--profile_model",
+            "--profile_model_num_runs",
+            "100",
             "--forward_mode",
             "frame",
             "--batch_size",
             BATCH_SIZE,
             "--num_workers",
-            BATCH_SIZE ,
+            BATCH_SIZE,
             "--dataset_name",
             "dummy",
             "--logging_backend",
