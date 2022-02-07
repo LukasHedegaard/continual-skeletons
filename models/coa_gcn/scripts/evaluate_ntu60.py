@@ -58,7 +58,5 @@ for subset, modality, pretrained_model in [
             str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
-            "--pool_size",
-            "56",
         ]
     )
