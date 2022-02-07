@@ -134,10 +134,12 @@ class CoModelBase(RideMixin, co.Sequential):
         self.clean_state()
 
         N, C, T, S, V = step_shape
-        init_frames = self.receptive_field - self.padding - 1
-        data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
+        
+        step_data = torch.randn((N, C, S, V)).to(device=self.device)
 
-        self.forward_steps(data)
+        init_frames = self.receptive_field - self.padding - 1
+        for _ in range(init_frames):
+            self.forward_step(step_data)
 
     def validate_attributes(self):
         attrgetter("parameters")(self)
