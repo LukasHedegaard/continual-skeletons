@@ -16,8 +16,8 @@ DS_PATH = DATASETS_PATH / DS_NAME
 
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "agcn/nturgbd60_cv/ntu_cv_agcn_joint-49-29400.pt"),
-    ("xsub", "joint", "agcn/nturgbd60_cs/ntu_cs_agcn_joint-49-31300.pt"),
+    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
 ]:
 
     subprocess.call(
@@ -55,7 +55,7 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
             "--logging_backend",
             "wandb",
         ]
