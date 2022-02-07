@@ -202,7 +202,6 @@ def test_CoSpatioTemporalBlock_residual_neq_channels():
     co.eval()
 
     # Prepare data
-    kernel_size = 9
     T = 20
     B = 2
     num_nodes = ntu_rgbd.graph.A.shape[-1]
@@ -211,27 +210,23 @@ def test_CoSpatioTemporalBlock_residual_neq_channels():
     # Forward
     target = reg(sample)
 
-    # Frame-by-frame
-    output = []
-    for i in range(T):
-        output.append(co.forward_step(sample[:, :, i]))
+    # forward
+    output = co.forward(sample)
+    assert torch.allclose(target, output, atol=1e-6)
 
-    checks = [
-        torch.allclose(
-            target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.padding)],
-            atol=5e-7,
-        )
-        for t in range(reg.tcn.padding, T - (kernel_size - 1))
-    ]
+    # forward_steps
+    output1 = co.forward_steps(sample, pad_end=False)
+    assert torch.allclose(target[:, :, : -co.delay], output1, atol=1e-6)
 
-    assert all(checks)
+    co.clean_state()
+    output2 = co.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output2, atol=1e-6)
 
 
 def test_CoSpatioTemporalBlock_residual_neq_channels_strided():
     # Prepare data
     in_channels = 2
-    out_channels = 2
+    out_channels = 4
     A = ntu_rgbd.graph.A
     T = 20
     B = 2
@@ -267,8 +262,12 @@ def test_CoSpatioTemporalBlock_residual_neq_channels_strided():
     assert torch.allclose(target, output, atol=1e-6)
 
     # forward_steps
-    output = co.forward_steps(sample, pad_end=True)
-    assert torch.allclose(target, output, atol=1e-6)
+    output1 = co.forward_steps(sample, pad_end=False)
+    assert torch.allclose(target[:, :, : -co.delay // stride], output1, atol=1e-6)
+
+    co.clean_state()
+    output2 = co.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output2, atol=1e-6)
 
 
 def test_simple_costgcn():

@@ -5,10 +5,10 @@ import continual as co
 from datasets.ntu_rgbd import graph
 from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.a_gcn_mod.a_gcn_mod import AGcnMod
-from models.coa_gcn_mod.coa_gcn_mod import CoAGcnMod, TimeSlicedAdaptiveGraphConvolution
+from models.coa_gcn_mod.coa_gcn_mod import CoAdaptiveGraphConvolution, CoAGcnMod
 
 
-def test_TimeSlicedAdaptiveGraphConvolution():
+def test_CoAdaptiveGraphConvolution():
     SEQ_LEN = 4
     BATCH_SIZE = 2
     VERTICES = 25
@@ -18,7 +18,7 @@ def test_TimeSlicedAdaptiveGraphConvolution():
 
     agc = co.forward_stepping(AdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A))
 
-    tsagc = TimeSlicedAdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A)
+    tsagc = CoAdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A)
 
     #  Transfer weights
     state_dict = agc.state_dict()
@@ -83,11 +83,11 @@ def test_AGcnMod_dummy_params():
     # Forward
     o_reg = reg(sample)
     o_co1 = co.forward(sample)
-    o_co2 = co.forward(sample)
+    o_co2 = co.forward_steps(sample)
 
-    assert torch.allclose(o_reg, o_co1, rtol=5e-4)
-    assert torch.allclose(o_reg, o_co2, rtol=1e-4)
-    assert torch.allclose(o_co1, o_co2, rtol=1e-4)
+    assert torch.allclose(o_reg, o_co1, atol=1e-4)
+    assert torch.allclose(o_reg, o_co2, atol=1e-4)
+    assert torch.allclose(o_co1, o_co2, atol=1e-4)
 
 
 def real_hparams():

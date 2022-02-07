@@ -109,14 +109,14 @@ class SpatialAttention(nn.Module):
             if self.more_channels:
                 self.key_rel = nn.Parameter(
                     torch.randn(
-                        ((self.num_point ** 2) - self.num_point, self.dk // self.num),
+                        ((self.num_point**2) - self.num_point, self.dk // self.num),
                         requires_grad=True,
                     )
                 )
             else:
                 self.key_rel = nn.Parameter(
                     torch.randn(
-                        ((self.num_point ** 2) - self.num_point, self.dk // Nh),
+                        ((self.num_point**2) - self.num_point, self.dk // Nh),
                         requires_grad=True,
                     )
                 )
@@ -217,7 +217,7 @@ class SpatialAttention(nn.Module):
         v = self.split_heads_2d(v, Nh)
 
         dkh = dk // Nh
-        q = q * (dkh ** -0.5)
+        q = q * (dkh**-0.5)
         if self.more_channels:
             flat_q = torch.reshape(q, (N, Nh, dk // self.num, T * V))
             flat_k = torch.reshape(k, (N, Nh, dk // self.num, T * V))

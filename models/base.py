@@ -6,13 +6,12 @@ from typing import Sequence
 import numpy as np
 import torch
 import torch.nn as nn
+from ride import getLogger
 from ride.core import Configs, RideMixin
 from torch import Tensor
 
 import continual as co
 from models.utils import init_weights, unity, zero
-
-from ride import getLogger
 
 logger = getLogger(__name__)
 
@@ -364,7 +363,7 @@ def CoSpatioTemporalBlock(
     CoGraphConv=CoGraphConvolution,
     CoTempConv=CoTemporalConvolution,
 ):
-    window_size = int(window_size)
+    window_size = int(window_size)  # Currently unused. Could be used BN momentum
 
     gcn = CoGraphConv(in_channels, out_channels, A, bn_momentum=0.1)
     tcn = CoTempConv(
@@ -387,17 +386,12 @@ def CoSpatioTemporalBlock(
             relu,
         )
 
-    residual = CoTempConv(
-        in_channels,
-        out_channels,
-        kernel_size=1,
-        stride=stride,
-    )
+    residual = CoTempConv(in_channels, out_channels, kernel_size=1, stride=stride)
 
     phantom_padding = tcn.receptive_field - 2 * tcn.padding != 1
 
-    delay = tcn.delay
-    if not phantom_padding:
+    delay = tcn.delay // stride
+    if phantom_padding:
         delay = delay // 2
 
     return co.Sequential(

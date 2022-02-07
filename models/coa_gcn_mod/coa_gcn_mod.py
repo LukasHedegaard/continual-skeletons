@@ -33,11 +33,11 @@ class CoAGcnMod(
             ("layer3", CoSpatioTemporalBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 2 * 8)),
             ("layer4", CoSpatioTemporalBlock(64, 64, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 3 * 8)),
             ("layer5", CoSpatioTemporalBlock(64, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=T - 4 * 8, stride=1)),
-            ("layer6", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 1 * 8)),
-            ("layer7", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 2 * 8)),
-            ("layer8", CoSpatioTemporalBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) / 2 - 3 * 8, stride=1)),
-            ("layer9", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 1 * 8)),
-            ("layer10", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) / 2 - 3 * 8) / 2 - 2 * 8)),
+            ("layer6", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) - 1 * 8)),
+            ("layer7", CoSpatioTemporalBlock(128, 128, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) - 2 * 8)),
+            ("layer8", CoSpatioTemporalBlock(128, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=(T - 4 * 8) - 3 * 8, stride=1)),
+            ("layer9", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) - 3 * 8) - 1 * 8)),
+            ("layer10", CoSpatioTemporalBlock(256, 256, A, CoGraphConv=CoAdaptiveGraphConvolution, padding=0, window_size=((T - 4 * 8) - 3 * 8) - 2 * 8)),
         ]))
         # fmt: on
 

@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 import continual as co
 from datasets import datasets
-from models.s_tr.s_tr import GcnUnitAttention
 from models.base import CoModelBase, CoSpatioTemporalBlock
+from models.s_tr.s_tr import GcnUnitAttention
 
 
 def CoGcnUnitAttention(in_channels, out_channels, A, bn_momentum=0.1):
