@@ -30,7 +30,6 @@ for subset, modality, pretrained_model in [
             GPUS,
             "--forward_mode",
             "frame",
-            "--profile_model",
             "--test",
             "--batch_size",
             "128",

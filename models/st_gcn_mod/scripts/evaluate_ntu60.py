@@ -27,7 +27,6 @@ for subset, modality, pretrained_model in [
             "--gpus",
             "1",
             "--test",
-            "--profile_model",
             "--batch_size",
             "128",
             "--num_workers",

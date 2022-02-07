@@ -29,7 +29,6 @@ for subset, modality, pretrained_model in [
             "1",
             "--forward_mode",
             "frame",
-            "--profile_model",
             "--test",
             "--batch_size",
             "128",

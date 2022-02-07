@@ -31,7 +31,6 @@ for subset, modality, pretrained_model in [
             "--forward_mode",
             "frame",
             "--test",
-            "--profile_model",
             "--batch_size",
             "32",
             "--num_workers",
