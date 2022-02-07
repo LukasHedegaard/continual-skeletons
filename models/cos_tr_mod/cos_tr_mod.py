@@ -8,8 +8,8 @@ from models.s_tr.s_tr import GcnUnitAttention
 
 
 def CoGcnUnitAttention(in_channels, out_channels, A, bn_momentum=0.1):
-    return co.forward_stepping(GcnUnitAttention)(
-        in_channels, out_channels, A, bn_momentum
+    return co.forward_stepping(
+        GcnUnitAttention(in_channels, out_channels, A, bn_momentum)
     )
 
 
