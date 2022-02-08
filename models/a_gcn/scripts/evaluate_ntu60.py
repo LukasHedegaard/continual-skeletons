@@ -10,24 +10,25 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = "0,"
 LOGGING_BACKEND = "wandb"
-DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / "ntu60"
+DS_NAME = "ntu"
+DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "stgcn/nturgbd60_xview/ntu_cv_stgcn_joint-49-29400.pt"),
-    # ("xsub", "joint", "stgcn/nturgbd60_xsub/ntu_cs_stgcn_joint-49-31300.pt"),
+    ("xview", "joint", "agcn/nturgbd60_cv/ntu_cv_agcn_joint-49-29400.pt"),
+    ("xsub", "joint", "agcn/nturgbd60_cs/ntu_cs_agcn_joint-49-31300.pt"),
 ]:
+
     subprocess.call(
         [
             "python3",
-            "models/st_gcn_mod/st_gcn_mod.py",
+            "models/a_gcn/a_gcn.py",
             "--id",
             f"eval_{DS_NAME}_{subset}_{modality}",
             "--gpus",
-            "1",
+            GPUS,
             "--test",
-            "--profile_model",
             "--batch_size",
             "128",
             "--num_workers",
@@ -54,6 +55,5 @@ for subset, modality, pretrained_model in [
             str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
-            # "--help",
         ]
     )

@@ -125,7 +125,7 @@ class CoModelBase(RideMixin, co.Sequential):
             # A new output is created every `self.stride` frames.
             self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
 
-    def warm_up(self, step_shape: Sequence[int]):
+    def warm_up(self, input_shape: Sequence[int]):
         # Called prior to profiling
 
         if self.hparams.forward_mode == "clip":
@@ -133,11 +133,28 @@ class CoModelBase(RideMixin, co.Sequential):
 
         self.clean_state()
 
-        N, C, T, S, V = step_shape
-        init_frames = self.receptive_field - self.padding - 1
-        data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
+        N, C, T, S, V = input_shape
 
-        self.forward_steps(data)
+        step_data = torch.randn((N, C, S, V)).to(device=self.device)
+        self._current_input_shape = (N, C, S, V)
+
+        init_frames = self.receptive_field - self.padding - 1
+        for _ in range(init_frames):
+            self.forward_step(step_data)
+
+    def clean_state_on_shape_change(self, shape):
+        if getattr(self, "_current_input_shape", None) != shape:
+            self._current_input_shape = shape
+            self.clean_state()
+
+    def forward_step(self, input, update_state=True):
+        self.clean_state_on_shape_change(input.shape)
+        return super().forward_step(input, update_state)
+
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
+        N, C, T, S, V = input.shape
+        self.clean_state_on_shape_change((N, C, S, V))
+        return super().forward_steps(input, pad_end, update_state)
 
     def validate_attributes(self):
         attrgetter("parameters")(self)
@@ -183,13 +200,6 @@ class CoModelBase(RideMixin, co.Sequential):
 
     def map_loaded_weights(self, file, loaded_state_dict):
         return self.map_state_dict(loaded_state_dict)
-
-    def clean_state_on_shape_change(self, shape):
-        if not hasattr(self, "_current_input_shape"):
-            self._current_input_shape = shape
-
-        if self._current_input_shape != shape:
-            self.clean_state()
 
 
 class GraphConvolution(nn.Module):

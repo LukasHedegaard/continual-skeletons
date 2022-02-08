@@ -27,7 +27,6 @@ for subset, modality in [
             "1",
             "--train",
             "--test",
-            "--profile_model",
             "--max_epochs",
             "50",
             "--optimization_metric",
