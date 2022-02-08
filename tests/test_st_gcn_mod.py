@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-import pytest
 import torch
 
 from datasets import ntu_rgbd
@@ -117,30 +116,3 @@ def real_hparams():
         "finetune_from_weights"
     ] = "models/st_gcn_mod/weights/stgcnmod_ntu60_xview_joint.ckpt"
     return d
-
-
-@pytest.mark.skip(reason="Model weights and dataset not available in CI/CD system")
-def test_StGcnMod_real_params():
-    # Model definition
-    hparams = real_hparams()
-    reg = StGcnMod(hparams)
-    co = CoStGcnMod(hparams)
-
-    #  Transfer weights
-    co.load_state_dict(reg.state_dict())
-
-    # Set to eval mode (otherwise batchnorm doesn't match)
-    reg.eval()
-    co.eval()
-
-    # Prepare sample
-    # sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
-    sample = next(iter(reg.train_dataloader()))[0]
-
-    # Forward
-    o_co1 = co.forward(sample)
-    o_co2 = co.forward_steps(sample)
-    o_reg = reg(sample)
-
-    assert torch.allclose(o_reg, o_co1, rtol=5e-5)
-    assert torch.allclose(o_reg, o_co2, rtol=5e-5)

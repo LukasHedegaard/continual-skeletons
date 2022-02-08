@@ -333,7 +333,16 @@ def test_costgcn():
     reg = StGcn(hparams)
     co = CoStGcn(hparams)
 
-    #  Transfer weights
+    # Try to load real weights if available
+    try:
+        reg.load_state_dict(
+            torch.load("models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
+            strict=False,
+        )
+    except Exception:
+        pass
+
+    # Transfer weights
     co.load_state_dict(reg.state_dict(), strict=False)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
@@ -341,7 +350,6 @@ def test_costgcn():
     co.eval()
 
     # Prepare sample
-    # sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
     sample = next(iter(reg.train_dataloader()))
 
     target = reg(sample)
