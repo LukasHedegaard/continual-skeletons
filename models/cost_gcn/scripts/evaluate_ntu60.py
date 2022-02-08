@@ -23,7 +23,7 @@ for subset, modality, pretrained_model in [
             "python3",
             "models/cost_gcn/cost_gcn.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}_after_refactor_no_pool_specified",
+            f"eval_{DS_NAME}_{subset}_{modality}",
             "--gpus",
             GPUS,
             "--forward_mode",
