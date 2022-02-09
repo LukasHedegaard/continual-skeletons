@@ -17,7 +17,9 @@ DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
     ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
+    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "bone", "models/a_gcn/weights/agcn_ntu60_xsub_bone.pt"),
+    ("xsub", "bone", "models/a_gcn/weights/agcn_ntu60_xsub_bone.pt"),
 ]:
 
     subprocess.call(
