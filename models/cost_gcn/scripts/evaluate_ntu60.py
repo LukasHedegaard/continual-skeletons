@@ -10,12 +10,12 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "4"
+GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    # ("xview", "joint", "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
+    ("xview", "joint", "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
     ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
@@ -55,11 +55,5 @@ for subset, modality, pretrained_model in [
             pretrained_model,
             "--logging_backend",
             "wandb",
-            "--distributed_backend",
-            "ddp"
-            # "--pool_size",
-            # "75",
-            # "--limit_test_batches",
-            # "10",
         ]
     )
