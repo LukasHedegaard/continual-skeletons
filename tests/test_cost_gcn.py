@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
+import continual
+import pytest
 import torch
 
-import continual
 from datasets import ntu_rgbd
 from models.base import (
     CoSpatioTemporalBlock,
@@ -330,20 +331,12 @@ def test_costgcn():
     hparams = default_hparams()
     hparams["dataset_name"] = "dummy"
     hparams["batch_size"] = 1
+
     reg = StGcn(hparams)
     co = CoStGcn(hparams)
 
-    # Try to load real weights if available
-    try:
-        reg.load_state_dict(
-            torch.load("models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
-            strict=False,
-        )
-    except Exception:
-        pass
-
     # Transfer weights
-    co.load_state_dict(reg.state_dict(), strict=False)
+    co.load_state_dict(co.map_state_dict(reg.state_dict()), strict=False)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()
@@ -353,11 +346,77 @@ def test_costgcn():
     sample = next(iter(reg.train_dataloader()))
 
     target = reg(sample)
+    ks = 3
+    target_inds = torch.topk(target, ks).indices
 
     # forward
     o_co1 = co.forward(sample)
-    assert torch.allclose(target, o_co1, rtol=5e-5)
+    assert torch.equal(target_inds, torch.topk(o_co1, ks).indices)
+    # Would be exact if pool_size 75 was used.
+    # However, this would not work for continual inferece.
+    # assert torch.allclose(target, o_co1, rtol=5e-5)
 
     # forward_steps
-    o_co2 = co.forward_steps(sample, pad_end=True)
-    assert torch.allclose(target, o_co2, rtol=5e-5)
+    o_co2 = co.forward_steps(sample)
+    assert torch.equal(target_inds, torch.topk(o_co2, ks).indices)
+    assert torch.allclose(o_co1, o_co2, rtol=1e-4)
+
+
+@pytest.mark.skip(reason="Model weights and dataset not available in CI/CD system")
+def test_costgcn_real():
+    # Model definition
+    hparams = default_hparams()
+    hparams["dataset_name"] = "dummy"
+    hparams["batch_size"] = 1
+
+    reg = StGcn(hparams)
+    co = CoStGcn(hparams)
+
+    # Try to load real weights if available
+    reg.load_state_dict(
+        torch.load("models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
+        strict=False,
+    )
+
+    # Transfer weights
+    co.load_state_dict(co.map_state_dict(reg.state_dict()), strict=False)
+
+    # Set to eval mode (otherwise batchnorm doesn't match)
+    reg.eval()
+    co.eval()
+
+    # Prepare sample
+    import os
+    from pathlib import Path
+
+    from datasets.datasets import GraphDataset
+
+    DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
+    DS_NAME = "ntu60"
+    subset = "xview"
+    modality = "joint"
+    DS_PATH = DATASETS_PATH / DS_NAME
+
+    ds = GraphDataset(
+        data_path=str(DS_PATH / subset / f"val_data_{modality}.npy"),
+        label_path=str(DS_PATH / subset / "val_label.pkl"),
+    )
+    sample, label, _ = ds[0]
+    sample = torch.tensor(sample).unsqueeze(0)  # Add batch dim
+
+    target = reg(sample)
+    ks = 3
+    target_inds = torch.topk(target, ks).indices
+    assert target_inds[0][0] == label
+
+    # forward
+    o_co1 = co.forward(sample)
+    assert torch.equal(target_inds, torch.topk(o_co1, ks).indices)
+    # Would be exact if pool_size 75 was used.
+    # However, this would not work for continual inferece.
+    # assert torch.allclose(target, o_co1, rtol=5e-5)
+
+    # forward_steps
+    o_co2 = co.forward_steps(sample)
+    assert torch.equal(target_inds, torch.topk(o_co2, ks).indices)
+    assert torch.allclose(o_co1, o_co2, rtol=5e-5)

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from operator import attrgetter
 from typing import Sequence
 
+import continual as co
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,7 +11,6 @@ from ride import getLogger
 from ride.core import Configs, RideMixin
 from torch import Tensor
 
-import continual as co
 from models.utils import init_weights, unity, zero
 
 logger = getLogger(__name__)
@@ -55,6 +55,14 @@ class CoModelBase(RideMixin, co.Sequential):
                 "which matches the network delay to the input_shape"
             ),
         )
+        c.add(
+            name="pool_padding",
+            type=int,
+            default=-1,
+            description=(
+                "Padding in pooling layer. If `-1`, a suitable default padding size will be chosen, "
+            ),
+        )
         return c
 
     def on_init_end(self, hparams, *args, **kwargs):
@@ -73,17 +81,20 @@ class CoModelBase(RideMixin, co.Sequential):
             .view(-1, C_in, V)
         )
 
-        def dummy(x):
-            return x
-
         spatial_pool = co.Lambda(lambda x: x.view(-1, S, 256, V).mean(3).mean(1))
 
         pool_size = self.hparams.pool_size
         if pool_size == -1:
             pool_size = math.ceil(
-                (T - (self.receptive_field - 1) + 2 * self.padding) / self.stride
+                (T - self.receptive_field + 2 * self.padding + 1) / self.stride
             )
-        pool = co.AvgPool1d(pool_size, stride=1)
+
+        pool_padding = self.hparams.pool_padding
+        if pool_padding == -1:
+            pool_padding = pool_size - math.ceil(
+                (T - self.receptive_field + self.padding + 1) / self.stride
+            )
+        pool = co.AvgPool1d(pool_size, stride=1, padding=max(0, pool_padding))
 
         fc = co.Linear(256, self.num_classes, channel_dim=1)
 
@@ -103,7 +114,6 @@ class CoModelBase(RideMixin, co.Sequential):
                     ("reshape2", reshape2),
                     ("layers", self.layers),
                     ("spatial_pool", spatial_pool),
-                    ("dummy", co.Lambda(dummy, takes_time=True)),
                     ("pool", pool),
                     ("fc", fc),
                     ("squeeze", squeeze),
@@ -114,6 +124,12 @@ class CoModelBase(RideMixin, co.Sequential):
         if self.hparams.forward_mode == "frame":
             self.call_mode = "forward_steps"  # Set continual forward mode
 
+        logger.info(f"Input shape (C, T, V, S) = {self.input_shape}")
+        logger.info(f"Receptive field {self.receptive_field}")
+        logger.info(f"Init frames {self.receptive_field - 2 * self.padding - 1}")
+        logger.info(f"Pool size {pool_size}")
+        logger.info(f"Stride {self.stride}")
+        logger.info(f"Padding {self.padding}")
         logger.info(f"Using Continual {self.call_mode}")
 
         if (
@@ -146,6 +162,23 @@ class CoModelBase(RideMixin, co.Sequential):
         if getattr(self, "_current_input_shape", None) != shape:
             self._current_input_shape = shape
             self.clean_state()
+
+    def forward(self, input):
+        if self.hparams.forward_mode == "clip":
+            ret = super().forward(input)
+        else:
+            assert self.hparams.forward_mode == "frame"
+            N, C, T, S, V = input.shape
+            self.clean_state_on_shape_change((N, C, S, V))
+
+            if not self.hparams.profile_model:
+                self.clean_state()
+
+            ret = super().forward_steps(input, update_state=True, pad_end=False)
+
+        if len(getattr(ret, "shape", (0,))) == 3:
+            ret = ret[:, :, 0]
+        return ret
 
     def forward_step(self, input, update_state=True):
         self.clean_state_on_shape_change(input.shape)
@@ -189,14 +222,6 @@ class CoModelBase(RideMixin, co.Sequential):
                 ]
             )
         return state_dict
-
-    def load_state_dict(
-        self,
-        state_dict: "OrderedDict[str, Tensor]",
-        strict: bool = True,
-    ):
-        state_dict = self.map_state_dict(state_dict, strict)
-        return nn.Module.load_state_dict(self, state_dict, strict)
 
     def map_loaded_weights(self, file, loaded_state_dict):
         return self.map_state_dict(loaded_state_dict)

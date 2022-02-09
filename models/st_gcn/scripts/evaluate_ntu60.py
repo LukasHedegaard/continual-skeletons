@@ -12,12 +12,12 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
 GPUS = "0,"
 LOGGING_BACKEND = "wandb"
-DS_NAME = "ntu"
+DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "stgcn/nturgbd60_cv/ntu_cv_stgcn_joint-49-29400.pt"),
-    ("xsub", "joint", "stgcn/nturgbd60_cs/ntu_cs_stgcn_joint-49-31300.pt"),
+    ("xview", "joint", "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt"),
+    # ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
         [
@@ -51,9 +51,10 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
-            "--logging_backend",
-            "wandb",
-            # "--help",
+            pretrained_model,
+            # "--logging_backend",
+            # "wandb",
+            "--limit_test_batches",
+            "5",
         ]
     )

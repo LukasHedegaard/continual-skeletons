@@ -2,6 +2,7 @@ import ride  # isort: skip
 from typing import OrderedDict
 
 import continual as co
+
 from datasets import datasets
 from models.a_gcn_mod.a_gcn_mod import AdaptiveGraphConvolutionMod
 from models.base import CoModelBase, CoSpatioTemporalBlock

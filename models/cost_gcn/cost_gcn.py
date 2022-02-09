@@ -6,6 +6,7 @@ import ride  # isort:skip
 from collections import OrderedDict
 
 import continual as co
+
 from datasets import datasets
 from models.base import CoModelBase, CoSpatioTemporalBlock
 

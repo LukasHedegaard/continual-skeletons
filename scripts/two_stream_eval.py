@@ -1,12 +1,13 @@
-from pathlib import Path
-from typing import List
-import numpy as np
-from functools import reduce
 import argparse
 import pickle
-from ride.metrics import topk_accuracies
-from ride import getLogger
+from functools import reduce
+from pathlib import Path
+from typing import List
+
+import numpy as np
 import yaml
+from ride import getLogger
+from ride.metrics import topk_accuracies
 
 logger = getLogger(__name__)
 

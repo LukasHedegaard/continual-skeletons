@@ -1,7 +1,7 @@
+import continual as co
 import pytest
 import torch
 
-import continual as co
 from datasets.ntu_rgbd import graph
 from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.a_gcn_mod.a_gcn_mod import AGcnMod
@@ -71,7 +71,7 @@ def test_AGcnMod_dummy_params():
     co = CoAGcnMod(hparams)
 
     #  Transfer weights
-    co.load_state_dict(reg.state_dict())
+    co.load_state_dict(co.map_state_dict(reg.state_dict()))
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()
@@ -80,14 +80,22 @@ def test_AGcnMod_dummy_params():
     # Prepare sample
     sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
 
-    # Forward
-    o_reg = reg(sample)
-    o_co1 = co.forward(sample)
-    o_co2 = co.forward_steps(sample)
+    # Target
+    target = reg(sample)
+    ks = 3
+    target_inds = torch.topk(target, ks).indices
 
-    assert torch.allclose(o_reg, o_co1, atol=1e-4)
-    assert torch.allclose(o_reg, o_co2, atol=1e-4)
-    assert torch.allclose(o_co1, o_co2, atol=1e-4)
+    # forward
+    o_co1 = co.forward(sample)
+    assert torch.equal(target_inds, torch.topk(o_co1, ks).indices)
+    # Would be exact if pool_size 75 was used.
+    # However, this would not work for continual inferece.
+    # assert torch.allclose(target, o_co1, rtol=5e-5)
+
+    # forward_steps
+    o_co2 = co.forward_steps(sample)
+    assert torch.equal(target_inds, torch.topk(o_co2, ks).indices)
+    assert torch.allclose(o_co1, o_co2, rtol=1e-4)
 
 
 def real_hparams():

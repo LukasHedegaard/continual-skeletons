@@ -70,7 +70,7 @@ def test_StGcnMod_dummy_params():
     co = CoStGcnMod(hparams)
 
     #  Transfer weights
-    co.load_state_dict(reg.state_dict(), strict=True)
+    co.load_state_dict(co.map_state_dict(reg.state_dict()), strict=True)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()

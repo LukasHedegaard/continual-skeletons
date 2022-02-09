@@ -2,6 +2,8 @@ import ride  # isort:skip
 from collections import OrderedDict
 
 import continual as co
+from torch import Tensor, nn
+
 from datasets import datasets
 from models.base import CoModelBase, CoSpatioTemporalBlock
 from models.s_tr.s_tr import GcnUnitAttention
@@ -42,6 +44,43 @@ class CoSTr(
         # fmt: on
 
         # Other layers defined in CoModelBase.on_init_end
+
+    def map_state_dict(
+        self,
+        state_dict: "OrderedDict[str, Tensor]",
+        strict: bool = True,
+    ) -> "OrderedDict[str, Tensor]":
+        def map_key(k: str):
+            # Handle "layers.layer2.0.1.gcn.g_conv.0.weight" -> "layers.layer2.gcn.g_conv.0.weight"
+            k = k.replace("0.1.", "")
+
+            # Handle "layers.layer8.0.0.residual.t_conv.weight" ->layers.layer8.residual.t_conv.weight'
+            k = k.replace("0.0.residual", "residual")
+            return k
+
+        long_keys = nn.Module.state_dict(self, keep_vars=True).keys()
+
+        if len(long_keys - state_dict.keys()):
+            short2long = {map_key(k): k for k in long_keys}
+            state_dict = OrderedDict(
+                [
+                    (short2long[k], v)
+                    for k, v in state_dict.items()
+                    if strict or k in short2long
+                ]
+            )
+        return state_dict
+
+    def load_state_dict(
+        self,
+        state_dict: "OrderedDict[str, Tensor]",
+        strict: bool = True,
+    ):
+        state_dict = self.map_state_dict(state_dict, strict)
+        return nn.Module.load_state_dict(self, state_dict, strict)
+
+    def map_loaded_weights(self, file, loaded_state_dict):
+        return self.map_state_dict(loaded_state_dict)
 
 
 if __name__ == "__main__":  # pragma: no cover
