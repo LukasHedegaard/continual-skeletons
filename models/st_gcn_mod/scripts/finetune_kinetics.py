@@ -13,7 +13,7 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 GPUS = int(os.getenv("GPUS", default="1"))
 BATCH_SIZE = 8
 # Adjust LR using linear scaling rule
-LEARNING_RATE = int(0.1 / 64 * BATCH_SIZE * GPUS)
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
 
 DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME

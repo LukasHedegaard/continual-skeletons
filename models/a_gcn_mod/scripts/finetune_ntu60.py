@@ -13,13 +13,13 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 GPUS = int(os.getenv("GPUS", default="1"))
 BATCH_SIZE = 8
 # Adjust LR using linear scaling rule
-LEARNING_RATE = int(0.1 / 64 * BATCH_SIZE * GPUS)
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
 
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
+    # ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
     ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
     ("xview", "bone", "models/a_gcn/weights/agcn_ntu60_xview_bone.pt"),
     ("xsub", "bone", "models/a_gcn/weights/agcn_ntu60_xsub_bone.pt"),
