@@ -10,12 +10,19 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = int(0.1 / 8 * BATCH_SIZE * GPUS)
+
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality in [
     # ("xview", "joint"),
     ("xsub", "joint"),
+    ("xview", "bone"),
+    ("xsub", "bone"),
 ]:
     subprocess.call(
         [
@@ -24,18 +31,17 @@ for subset, modality in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_train",
             "--gpus",
-            "1",
+            str(GPUS),
             "--train",
             "--test",
-            "--profile_model",
             "--max_epochs",
             "50",
             "--optimization_metric",
             "top1acc",
             "--batch_size",
-            "12",
+            str(BATCH_SIZE),
             "--num_workers",
-            "12",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -59,10 +65,12 @@ for subset, modality in [
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.15",  # Linear scaling rule from lr 0.1 @ bs 8
+            str(LEARNING_RATE),
             "--weight_decay",
             "0.0001",
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )

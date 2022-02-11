@@ -10,33 +10,38 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
-DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / DS_NAME
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = int(0.1 / 8 * BATCH_SIZE * GPUS)
 
+DS_NAME = "ntu120"
+DS_PATH = DATASETS_PATH / "ntu120"
 
-for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
-    ("xview", "bone", "models/a_gcn/weights/agcn_ntu60_xview_bone.pt"),
-    ("xsub", "bone", "models/a_gcn/weights/agcn_ntu60_xsub_bone.pt"),
+for subset, modality in [
+    ("xset", "joint"),
+    ("xsub", "joint"),
+    ("xset", "bone"),
+    ("xsub", "bone"),
 ]:
-
     subprocess.call(
         [
             "python3",
-            "models/coa_gcn/coa_gcn.py",
+            "models/s_tr_mod/s_tr_mod.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"{DS_NAME}_{subset}_{modality}_train",
             "--gpus",
-            GPUS,
-            "--forward_mode",
-            "frame",
+            str(GPUS),
+            "--train",
             "--test",
+            "--max_epochs",
+            "50",
+            "--optimization_metric",
+            "top1acc",
             "--batch_size",
-            "64",
+            str(BATCH_SIZE),
             "--num_workers",
-            "8",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -55,9 +60,17 @@ for subset, modality, pretrained_model in [
             str(DS_PATH / subset / "val_label.pkl"),
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
-            "--finetune_from_weights",
-            pretrained_model,
+            "--unfreeze_from_epoch",
+            "0",
+            "--unfreeze_layers_initial",
+            "-1",
+            "--learning_rate",
+            str(LEARNING_RATE),
+            "--weight_decay",
+            "0.0001",
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )

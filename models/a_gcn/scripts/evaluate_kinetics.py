@@ -11,32 +11,29 @@ LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
 GPUS = "1"
-DS_NAME = "ntu60"
+DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME
+BATCH_SIZE = 8
 
-
-for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
-    ("xview", "bone", "models/a_gcn/weights/agcn_ntu60_xview_bone.pt"),
-    ("xsub", "bone", "models/a_gcn/weights/agcn_ntu60_xsub_bone.pt"),
+for modality, pretrained_model in [
+    ("joint", "models/a_gcn/weights/agcn_kinetics_joint.pt"),
+    ("bone", "models/a_gcn/weights/agcn_kinetics_bone.pt"),
 ]:
-
     subprocess.call(
         [
             "python3",
-            "models/coa_gcn/coa_gcn.py",
+            "models/a_gcn/a_gcn.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"train_{DS_NAME}_{modality}",
             "--gpus",
-            GPUS,
-            "--forward_mode",
-            "frame",
+            str(GPUS),
             "--test",
+            "--optimization_metric",
+            "top1acc",
             "--batch_size",
-            "64",
+            str(BATCH_SIZE),
             "--num_workers",
-            "8",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -44,17 +41,17 @@ for subset, modality, pretrained_model in [
             "--dataset_classes",
             str(DS_PATH / "classes.yaml"),
             "--dataset_train_data",
-            str(DS_PATH / subset / f"train_data_{modality}.npy"),
+            str(DS_PATH / f"train_data_{modality}.npy"),
             "--dataset_val_data",
-            str(DS_PATH / subset / f"val_data_{modality}.npy"),
+            str(DS_PATH / f"val_data_{modality}.npy"),
             "--dataset_test_data",
-            str(DS_PATH / subset / f"val_data_{modality}.npy"),
+            str(DS_PATH / f"val_data_{modality}.npy"),
             "--dataset_train_labels",
-            str(DS_PATH / subset / "train_label.pkl"),
+            str(DS_PATH / "train_label.pkl"),
             "--dataset_val_labels",
-            str(DS_PATH / subset / "val_label.pkl"),
+            str(DS_PATH / "val_label.pkl"),
             "--dataset_test_labels",
-            str(DS_PATH / subset / "val_label.pkl"),
+            str(DS_PATH / "val_label.pkl"),
             "--finetune_from_weights",
             pretrained_model,
             "--logging_backend",

@@ -13,29 +13,24 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 GPUS = int(os.getenv("GPUS", default="1"))
 BATCH_SIZE = 8
 # Adjust LR using linear scaling rule
-LEARNING_RATE = int(0.1 / 64 * BATCH_SIZE * GPUS)
+LEARNING_RATE = int(0.1 / 8 * BATCH_SIZE * GPUS)
 
-DS_NAME = "ntu120"
-DS_PATH = DATASETS_PATH / DS_NAME
+DS_NAME = "kinetics"
+DS_PATH = DATASETS_PATH / "kinetics"
 
-for subset, modality, pretrained_model in [
-    ("xset", "joint", "models/a_gcn/weights/agcn_ntu120_xset_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu120_xsub_joint.pt"),
-    ("xset", "bone", "models/a_gcn/weights/agcn_ntu120_xset_bone.pt"),
-    ("xsub", "bone", "models/a_gcn/weights/agcn_ntu120_xsub_bone.pt"),
-]:
+for modality in ["joint", "bone"]:
     subprocess.call(
         [
             "python3",
-            "models/a_gcn_mod/a_gcn_mod.py",
+            "models/s_tr_mod/s_tr_mod.py",
             "--id",
-            f"{DS_NAME}_{subset}_{modality}_finetune",
+            f"{DS_NAME}_{modality}_train",
             "--gpus",
             str(GPUS),
             "--train",
             "--test",
             "--max_epochs",
-            "30",
+            "50",
             "--optimization_metric",
             "top1acc",
             "--batch_size",
@@ -49,19 +44,17 @@ for subset, modality, pretrained_model in [
             "--dataset_classes",
             str(DS_PATH / "classes.yaml"),
             "--dataset_train_data",
-            str(DS_PATH / subset / f"train_data_{modality}.npy"),
+            str(DS_PATH / f"train_data_{modality}.npy"),
             "--dataset_val_data",
-            str(DS_PATH / subset / f"val_data_{modality}.npy"),
+            str(DS_PATH / f"val_data_{modality}.npy"),
             "--dataset_test_data",
-            str(DS_PATH / subset / f"val_data_{modality}.npy"),
+            str(DS_PATH / f"val_data_{modality}.npy"),
             "--dataset_train_labels",
-            str(DS_PATH / subset / "train_label.pkl"),
+            str(DS_PATH / "train_label.pkl"),
             "--dataset_val_labels",
-            str(DS_PATH / subset / "val_label.pkl"),
+            str(DS_PATH / "val_label.pkl"),
             "--dataset_test_labels",
-            str(DS_PATH / subset / "val_label.pkl"),
-            "--finetune_from_weights",
-            pretrained_model,
+            str(DS_PATH / "val_label.pkl"),
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
