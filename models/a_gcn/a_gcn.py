@@ -71,7 +71,7 @@ class AdaptiveGraphConvolution(nn.Module):
 
 class AGcn(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.SgdOneCycleOptimizer,
     ride.finetune.Finetunable,
     datasets.GraphDatasets,

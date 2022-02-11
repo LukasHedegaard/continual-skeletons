@@ -476,7 +476,7 @@ class GcnUnitAttention(nn.Module):
 
 class STr(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1, 5),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
 ):

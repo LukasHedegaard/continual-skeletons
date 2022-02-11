@@ -13,7 +13,7 @@ from models.base import CoModelBase, CoSpatioTemporalBlock
 
 class CoStGcn(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.optimizers.SgdCyclicLrOptimizer,
     datasets.GraphDatasets,
     CoModelBase,

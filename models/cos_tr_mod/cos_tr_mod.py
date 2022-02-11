@@ -16,7 +16,7 @@ def CoGcnUnitAttention(in_channels, out_channels, A, bn_momentum=0.1):
 
 class CoSTrMod(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.optimizers.SgdOneCycleOptimizer,
     datasets.GraphDatasets,
     CoModelBase,
