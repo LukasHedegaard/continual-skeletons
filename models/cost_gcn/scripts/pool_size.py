@@ -52,13 +52,7 @@ for pool_size in [1, 5, 10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 100, 150]:
             "--dataset_test_labels",
             str(DS_PATH / DS_SUBSET / "val_label.pkl"),
             "--finetune_from_weights",
-            str(
-                ROOT_PATH
-                / "pretrained_models"
-                / "stgcn"
-                / "nturgbd60_cv"
-                / "ntu_cv_stgcn_joint-49-29400.pt"
-            ),
+            "weights/stgcn_ntu60_xview_joint.pt",
             "--logging_backend",
             "wandb",
             "--precision",

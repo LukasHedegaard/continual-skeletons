@@ -53,13 +53,7 @@ subprocess.call(
         "--dataset_test_labels",
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
-        str(
-            ROOT_PATH
-            / "pretrained_models"
-            / "stgcn"
-            / "nturgbd60_cv"
-            / "ntu_cv_stgcn_joint-49-29400.pt"
-        ),
+        "weights/stgcn_ntu60_xview_joint.pt",
         # "--logging_backend",
         # "wandb",
         "--limit_test_batches",

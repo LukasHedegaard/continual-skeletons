@@ -19,8 +19,8 @@ DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for modality, pretrained_model in [
-    ("joint", "models/st_gcn/weights/stgcn_kinetics_joint.pt"),
-    ("bone", "models/st_gcn/weights/stgcn_kinetics_bone.pt"),
+    ("joint", "weights/stgcn_kinetics_joint.pt"),
+    ("bone", "weights/stgcn_kinetics_bone.pt"),
 ]:
     subprocess.call(
         [
