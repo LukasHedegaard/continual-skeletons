@@ -8,12 +8,6 @@ from models.base import CoModelBase, CoSpatioTemporalBlock
 from models.s_tr.s_tr import GcnUnitAttention
 
 
-def CoGcnUnitAttention(in_channels, out_channels, A, bn_momentum=0.1):
-    return co.forward_stepping(
-        GcnUnitAttention(in_channels, out_channels, A, bn_momentum)
-    )
-
-
 class CoSTrMod(
     ride.RideModule,
     ride.TopKAccuracyMetric(1, 3, 5),
@@ -26,6 +20,11 @@ class CoSTrMod(
         # num_channels, num_frames, num_vertices, num_skeletons
         (C_in, T, V, S) = self.input_shape
         A = self.graph.A
+
+        def CoGcnUnitAttention(in_channels, out_channels, A, bn_momentum=0.1):
+            return co.forward_stepping(
+                GcnUnitAttention(in_channels, out_channels, A, bn_momentum, num_point=V)
+            )
 
         # fmt: off
         self.layers = co.Sequential(OrderedDict([

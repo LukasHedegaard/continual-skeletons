@@ -30,19 +30,25 @@ class STrMod(
 
         # Define layers
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
+
+        def GraphConv(in_channels, out_channels, A):
+            return GcnUnitAttention(
+                in_channels, out_channels, A, num_point=num_vertices
+            )
+
         # fmt: off
         self.layers = nn.ModuleDict(
             {
                 "layer1": SpatioTemporalBlock(num_channels, 64, A, temporal_padding=0, residual=False),
                 "layer2": SpatioTemporalBlock(64, 64, A, temporal_padding=0),
                 "layer3": SpatioTemporalBlock(64, 64, A, temporal_padding=0),
-                "layer4": SpatioTemporalBlock(64, 64, A, temporal_padding=0, GraphConv=GcnUnitAttention),
-                "layer5": SpatioTemporalBlock(64, 128, A, temporal_padding=0, GraphConv=GcnUnitAttention, stride=1),
-                "layer6": SpatioTemporalBlock(128, 128, A, temporal_padding=0, GraphConv=GcnUnitAttention),
-                "layer7": SpatioTemporalBlock(128, 128, A, temporal_padding=0, GraphConv=GcnUnitAttention),
-                "layer8": SpatioTemporalBlock(128, 256, A, temporal_padding=0, GraphConv=GcnUnitAttention, stride=1),
-                "layer9": SpatioTemporalBlock(256, 256, A, temporal_padding=0, GraphConv=GcnUnitAttention),
-                "layer10": SpatioTemporalBlock(256, 256, A, temporal_padding=0, GraphConv=GcnUnitAttention),
+                "layer4": SpatioTemporalBlock(64, 64, A, temporal_padding=0, GraphConv=GraphConv),
+                "layer5": SpatioTemporalBlock(64, 128, A, temporal_padding=0, GraphConv=GraphConv, stride=1),
+                "layer6": SpatioTemporalBlock(128, 128, A, temporal_padding=0, GraphConv=GraphConv),
+                "layer7": SpatioTemporalBlock(128, 128, A, temporal_padding=0, GraphConv=GraphConv),
+                "layer8": SpatioTemporalBlock(128, 256, A, temporal_padding=0, GraphConv=GraphConv, stride=1),
+                "layer9": SpatioTemporalBlock(256, 256, A, temporal_padding=0, GraphConv=GraphConv),
+                "layer10": SpatioTemporalBlock(256, 256, A, temporal_padding=0, GraphConv=GraphConv),
             }
         )
         # fmt: on

@@ -493,19 +493,25 @@ class STr(
 
         # Define layers
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
+
+        def GraphConv(in_channels, out_channels, A):
+            return GcnUnitAttention(
+                in_channels, out_channels, A, num_point=num_vertices
+            )
+
         # fmt: off
         self.layers = nn.ModuleDict(
             {
                 "layer1": SpatioTemporalBlock(num_channels, 64, A, residual=False),
                 "layer2": SpatioTemporalBlock(64, 64, A),
                 "layer3": SpatioTemporalBlock(64, 64, A),
-                "layer4": SpatioTemporalBlock(64, 64, A, GraphConv=GcnUnitAttention),
-                "layer5": SpatioTemporalBlock(64, 128, A, GraphConv=GcnUnitAttention, stride=2),
-                "layer6": SpatioTemporalBlock(128, 128, A, GraphConv=GcnUnitAttention),
-                "layer7": SpatioTemporalBlock(128, 128, A, GraphConv=GcnUnitAttention),
-                "layer8": SpatioTemporalBlock(128, 256, A, GraphConv=GcnUnitAttention, stride=2),
-                "layer9": SpatioTemporalBlock(256, 256, A, GraphConv=GcnUnitAttention),
-                "layer10": SpatioTemporalBlock(256, 256, A, GraphConv=GcnUnitAttention),
+                "layer4": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv),
+                "layer5": SpatioTemporalBlock(64, 128, A, GraphConv=GraphConv, stride=2),
+                "layer6": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv),
+                "layer7": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv),
+                "layer8": SpatioTemporalBlock(128, 256, A, GraphConv=GraphConv, stride=2),
+                "layer9": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv),
+                "layer10": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv),
             }
         )
         # fmt: on
