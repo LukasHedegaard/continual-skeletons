@@ -13,12 +13,12 @@ Research repository for Continual Spatio-Temporal Graph Convolutional Neural Net
 ### Installation
 - Clone this repository and enter it: 
     ```bash
-    git clone https://github.com/LukasHedegaard/cost-gcn.git
-    cd cost-gcn
+    git clone https://github.com/LukasHedegaard/continual-skeletons.git
+    cd continual-skeletons
     ```
 - (Optionally) create conda environment:
     ```bash
-    conda create --name cost-gcn python=3.8
+    conda create --name continual-skeletons python=3.8
     ```
 - Install as editable module
     ```bash
