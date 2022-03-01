@@ -10,24 +10,27 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "0,"
-LOGGING_BACKEND = "wandb"
+GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
     ("xview", "joint", "weights/stgcn_ntu60_xview_joint.pt"),
     ("xsub", "joint", "weights/stgcn_ntu60_xsub_joint.pt"),
+    ("xview", "bone", "weights/stgcn_ntu60_xview_bone.pt"),
+    ("xsub", "bone", "weights/stgcn_ntu60_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
             "python3",
             "models/st_gcn/st_gcn.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"test_and_extract_{DS_NAME}_{subset}_{modality}",
             "--gpus",
             GPUS,
             "--test",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
             "128",
             "--num_workers",
@@ -52,9 +55,7 @@ for subset, modality, pretrained_model in [
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
             pretrained_model,
-            # "--logging_backend",
-            # "wandb",
-            "--limit_test_batches",
-            "5",
+            "--logging_backend",
+            "wandb",
         ]
     )

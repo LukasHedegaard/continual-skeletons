@@ -10,7 +10,11 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = "1"
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+
 DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME
 
@@ -21,18 +25,21 @@ for modality, pretrained_model in [
     subprocess.call(
         [
             "python3",
-            "models/a_gcn/a_gcn.py",
+            "models/a_gcn_mod/a_gcn_mod.py",
             "--id",
-            f"test_and_extract_{DS_NAME}_{modality}",
+            f"{DS_NAME}_{modality}_finetune",
             "--gpus",
-            GPUS,
+            str(GPUS),
+            "--train",
             "--test",
-            "--extract_features_after_layer",
-            "fc",
+            "--max_epochs",
+            "30",
+            "--optimization_metric",
+            "top1acc",
             "--batch_size",
-            "64",
+            str(BATCH_SIZE),
             "--num_workers",
-            "8",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -53,7 +60,17 @@ for modality, pretrained_model in [
             str(DS_PATH / "val_label.pkl"),
             "--finetune_from_weights",
             pretrained_model,
+            "--unfreeze_from_epoch",
+            "0",
+            "--unfreeze_layers_initial",
+            "-1",
+            "--learning_rate",
+            str(LEARNING_RATE),
+            "--weight_decay",
+            "0.0001",
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )
