@@ -10,26 +10,27 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
-
 
 for subset, modality, pretrained_model in [
     ("xview", "joint", "weights/str_ntu60_xview_joint.ckpt"),
     ("xsub", "joint", "weights/str_ntu60_xsub_joint.ckpt"),
+    ("xview", "bone", "weights/str_ntu60_xview_bone.ckpt"),
+    ("xsub", "bone", "weights/str_ntu60_xsub_bone.ckpt"),
 ]:
-
     subprocess.call(
         [
             "python3",
             "models/cos_tr/cos_tr.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"test_and_extract_{DS_NAME}_{subset}_{modality}",
             "--gpus",
-            "1",
-            "--forward_mode",
-            "frame",
+            GPUS,
             "--test",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
             "128",
             "--num_workers",

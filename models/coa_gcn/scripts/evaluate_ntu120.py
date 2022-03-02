@@ -10,33 +10,31 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / "ntu60"
+GPUS = "1"
+DS_NAME = "ntu120"
+DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "weights/stgcn_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "weights/stgcn_ntu60_xsub_joint.ckpt"),
+    ("xset", "joint", "weights/agcn_ntu120_xset_joint.pt"),
+    ("xsub", "joint", "weights/agcn_ntu120_xsub_joint.pt"),
+    ("xset", "bone", "weights/agcn_ntu120_xset_bone.pt"),
+    ("xsub", "bone", "weights/agcn_ntu120_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
             "python3",
-            "models/cost_gcn_mod/cost_gcn_mod.py",
+            "models/coa_gcn/coa_gcn.py",
             "--id",
-            f"{DS_NAME}_{subset}_{modality}_finetune",
+            f"test_and_extract_{DS_NAME}_{subset}_{modality}",
             "--gpus",
-            "4",
-            "--distributed_backend",
-            "ddp",
-            "--train",
-            "--max_epochs",
-            "20",
-            "--optimization_metric",
-            "top1acc",
+            GPUS,
             "--test",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
-            "12",
+            "128",
             "--num_workers",
-            "12",
+            "8",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -57,14 +55,6 @@ for subset, modality, pretrained_model in [
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
             pretrained_model,
-            "--unfreeze_from_epoch",
-            "0",
-            "--unfreeze_layers_initial",
-            "-1",
-            "--learning_rate",
-            "0.025",  # Linear scaling rule: 0,1 / 64 * 12 * 4 = 0.075
-            "--weight_decay",
-            "0.0001",
             "--logging_backend",
             "wandb",
         ]
