@@ -53,6 +53,8 @@ def multi_stream_eval(
     pred_paths = [pred1, pred2, pred3, pred4]
     preds = aggregate_preds([load_preds(p) for p in pred_paths if p])
     targets = np.array(load_labels(labels))
+    if len(preds.shape) == 3:
+        preds = preds[:, :, preds.shape[-1] // 2]  # Take middle
     topks = [1, 3, 5]
     accs = topk_accuracies(torch.tensor(preds), torch.tensor(targets), topks)
     result_dict = {f"top{k}acc": v for k, v in zip(topks, accs)}
