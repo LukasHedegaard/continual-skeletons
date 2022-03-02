@@ -10,33 +10,29 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
-GPUS = int(os.getenv("GPUS", default="1"))
-BATCH_SIZE = 8
-# Adjust LR using linear scaling rule
-LEARNING_RATE = 0.1 / 8 * BATCH_SIZE * GPUS
-
+GPUS = "1"
 DS_NAME = "kinetics"
-DS_PATH = DATASETS_PATH / "kinetics"
+DS_PATH = DATASETS_PATH / DS_NAME
 
-for modality in ["joint", "bone"]:
+for modality, pretrained_model in [
+    ("joint", "weights/str_kinetics_joint.pt"),
+    ("bone", "weights/str_kinetics_bone.ckpt"),
+]:
     subprocess.call(
         [
             "python3",
             "models/s_tr/s_tr.py",
             "--id",
-            f"{DS_NAME}_{modality}_train",
+            f"test_and_extract_{DS_NAME}_{modality}",
             "--gpus",
-            str(GPUS),
-            "--train",
+            GPUS,
             "--test",
-            "--max_epochs",
-            "50",
-            "--optimization_metric",
-            "top1acc",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
-            str(BATCH_SIZE),
+            "64",
             "--num_workers",
-            str(BATCH_SIZE // 2),
+            "8",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -55,19 +51,9 @@ for modality in ["joint", "bone"]:
             str(DS_PATH / "val_label.pkl"),
             "--dataset_test_labels",
             str(DS_PATH / "val_label.pkl"),
-            "--unfreeze_from_epoch",
-            "0",
-            "--unfreeze_layers_initial",
-            "-1",
-            "--learning_rate",
-            str(LEARNING_RATE),
-            "--weight_decay",
-            "0.0001",
+            "--finetune_from_weights",
+            pretrained_model,
             "--logging_backend",
             "wandb",
-            # "--accelerator",
-            # "ddp" if GPUS > 1 else "",
-            "--distributed_backend",
-            "horovod",
         ]
     )
