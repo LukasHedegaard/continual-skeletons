@@ -11,14 +11,14 @@ LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
 GPUS = "1"
-DS_NAME = "ntu60"
+DS_NAME = "ntu120"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "weights/agcnmod_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "weights/agcnmod_ntu60_xsub_joint.ckpt"),
-    ("xview", "bone", "weights/agcnmod_ntu60_xview_bone.ckpt"),
-    ("xsub", "bone", "weights/agcnmod_ntu60_xsub_bone.ckpt"),
+    ("xset", "joint", "weights/agcnmod_ntu120_xset_joint.ckpt"),
+    ("xsub", "joint", "weights/agcnmod_ntu120_xsub_joint.ckpt"),
+    ("xset", "bone", "weights/agcnmod_ntu120_xset_bone.ckpt"),
+    ("xsub", "bone", "weights/agcnmod_ntu120_xsub_bone.ckpt"),
 ]:
     subprocess.call(
         [
