@@ -18,7 +18,7 @@ class GraphDatasets(RideClassificationDataset):
             name="dataset_name",
             type=str,
             default="dummy",
-            choices=["ntu60", "ntu120", "kinetics", "dummy"],
+            choices=["ntu60", "ntu120", "kinetics", "dummy_ntu", "dummy_kin"],
             description="Name of dataset",
         )
         c.add(
@@ -126,20 +126,27 @@ class GraphDatasets(RideClassificationDataset):
 
         C_in = self.hparams.dataset_input_channels
         (self.output_shape, self.input_shape, self.graph) = {
-            "dummy": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "ntu60": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "ntu120": ((120,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
             "kinetics": ((400,), (C_in, 300, kinetics.NUM_NODES, 2), kinetics.graph),
+            "dummy_ntu": ((60,), (C_in, 300, ntu_rgbd.NUM_NODES, 2), ntu_rgbd.graph),
+            "dummy_kin": ((400,), (C_in, 300, kinetics.NUM_NODES, 2), kinetics.graph),
         }[self.hparams.dataset_name]
 
         self.classes = (
             [str(i) for i in range(self.output_shape[0])]
-            if self.hparams.dataset_name == "dummy"
+            if "dummy" in self.hparams.dataset_name
             else ride.utils.io.load_yaml(self.hparams.dataset_classes)
         )
         assert len(self.classes) == self.output_shape[0]
 
-        Ds = DummyDataset if self.hparams.dataset_name == "dummy" else GraphDataset
+        def DummyDs(*args, **kwargs):
+            return DummyDataset(
+                input_shape=self.input_shape,
+                num_classes=self.output_shape[0],
+            )
+
+        Ds = DummyDs if "dummy" in self.hparams.dataset_name else GraphDataset
 
         train_args = dict(
             random_choose=self.hparams.dataset_random_choose,

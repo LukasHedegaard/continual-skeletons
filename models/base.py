@@ -151,12 +151,11 @@ class CoModelBase(RideMixin, co.Sequential):
 
         N, C, T, S, V = input_shape
 
-        step_data = torch.randn((N, C, S, V)).to(device=self.device)
         self._current_input_shape = (N, C, S, V)
 
         init_frames = self.receptive_field - self.padding - 1
-        for _ in range(init_frames):
-            self.forward_step(step_data)
+        init_data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
+        self.forward_steps(init_data)
 
     def clean_state_on_shape_change(self, shape):
         if getattr(self, "_current_input_shape", None) != shape:

@@ -13,27 +13,26 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 GPUS = "1"
 DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME
-BATCH_SIZE = 8
 
 for modality, pretrained_model in [
-    ("joint", "models/a_gcn/weights/agcn_kinetics_joint.pt"),
-    ("bone", "models/a_gcn/weights/agcn_kinetics_bone.pt"),
+    ("joint", "weights/agcn_kinetics_joint.pt"),
+    ("bone", "weights/agcn_kinetics_bone.pt"),
 ]:
     subprocess.call(
         [
             "python3",
             "models/a_gcn/a_gcn.py",
             "--id",
-            f"train_{DS_NAME}_{modality}",
+            f"test_and_extract_{DS_NAME}_{modality}",
             "--gpus",
-            str(GPUS),
+            GPUS,
             "--test",
-            "--optimization_metric",
-            "top1acc",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
-            str(BATCH_SIZE),
+            "64",
             "--num_workers",
-            str(BATCH_SIZE // 2),
+            "8",
             "--dataset_normalization",
             "0",
             "--dataset_name",

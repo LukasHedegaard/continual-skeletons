@@ -14,25 +14,25 @@ GPUS = "1"
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / DS_NAME
 
-
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/s_tr_mod/weights/strmod_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "models/s_tr_mod/weights/strmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "joint", "weights/strmod_ntu60_xview_joint.ckpt"),
+    ("xsub", "joint", "weights/strmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "bone", "weights/strmod_ntu60_xview_bone.ckpt"),
+    ("xsub", "bone", "weights/strmod_ntu60_xsub_bone.ckpt"),
 ]:
-
     subprocess.call(
         [
             "python3",
             "models/cos_tr_mod/cos_tr_mod.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}",
+            f"test_and_extract_{DS_NAME}_{subset}_{modality}",
             "--gpus",
             GPUS,
-            "--forward_mode",
-            "frame",
             "--test",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
-            "128",
+            "64",
             "--num_workers",
             "8",
             "--dataset_normalization",

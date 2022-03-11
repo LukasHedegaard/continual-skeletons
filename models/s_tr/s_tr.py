@@ -13,6 +13,8 @@ from datasets import datasets
 from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
+from optimizers import SgdMultiStepLR
+
 
 class SpatialAttention(nn.Module):
     """
@@ -477,7 +479,8 @@ class GcnUnitAttention(nn.Module):
 class STr(
     ride.RideModule,
     ride.TopKAccuracyMetric(1, 3, 5),
-    ride.SgdOneCycleOptimizer,
+    # ride.SgdOneCycleOptimizer,
+    SgdMultiStepLR,
     datasets.GraphDatasets,
 ):
     def __init__(self, hparams):

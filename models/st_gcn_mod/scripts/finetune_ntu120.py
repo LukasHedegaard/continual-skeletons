@@ -19,10 +19,10 @@ DS_NAME = "ntu120"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xset", "joint", "models/st_gcn/weights/stgcn_ntu120_xset_joint.pt"),
-    ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu120_xsub_joint.pt"),
-    ("xset", "bone", "models/st_gcn/weights/stgcn_ntu120_xset_bone.pt"),
-    ("xsub", "bone", "models/st_gcn/weights/stgcn_ntu120_xsub_bone.pt"),
+    ("xset", "joint", "weights/stgcn_ntu120_xset_joint.pt"),
+    ("xsub", "joint", "weights/stgcn_ntu120_xsub_joint.pt"),
+    ("xset", "bone", "weights/stgcn_ntu120_xset_bone.pt"),
+    ("xsub", "bone", "weights/stgcn_ntu120_xsub_bone.pt"),
 ]:
     subprocess.call(
         [

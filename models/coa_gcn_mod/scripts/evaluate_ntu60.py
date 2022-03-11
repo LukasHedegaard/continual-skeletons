@@ -1,6 +1,3 @@
-"""
-Evaluate with pretrained weights from modified ST-GCN
-"""
 import os
 import subprocess
 from pathlib import Path
@@ -13,26 +10,29 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = "1"
 DS_NAME = "ntu60"
-DS_PATH = DATASETS_PATH / "ntu60"
+DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn_mod/weights/acgnmod_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "models/a_gcn_mod/weights/acgnmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "joint", "weights/agcnmod_ntu60_xview_joint.ckpt"),
+    ("xsub", "joint", "weights/agcnmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "bone", "weights/agcnmod_ntu60_xview_bone.ckpt"),
+    ("xsub", "bone", "weights/agcnmod_ntu60_xsub_bone.ckpt"),
 ]:
     subprocess.call(
         [
             "python3",
             "models/coa_gcn_mod/coa_gcn_mod.py",
             "--id",
-            f"eval_{DS_NAME}_{subset}_{modality}_agcnmod_weights",
+            f"test_and_extract_{DS_NAME}_{subset}_{modality}",
             "--gpus",
-            "1",
-            "--forward_mode",
-            "frame",
+            GPUS,
             "--test",
+            "--extract_features_after_layer",
+            "fc",
             "--batch_size",
-            "32",
+            "128",
             "--num_workers",
             "8",
             "--dataset_normalization",

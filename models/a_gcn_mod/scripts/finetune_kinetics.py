@@ -13,14 +13,14 @@ DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 GPUS = int(os.getenv("GPUS", default="1"))
 BATCH_SIZE = 8
 # Adjust LR using linear scaling rule
-LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+LEARNING_RATE = 0.01 / 64 * BATCH_SIZE * GPUS
 
 DS_NAME = "kinetics"
 DS_PATH = DATASETS_PATH / DS_NAME
 
 for modality, pretrained_model in [
-    ("joint", "models/a_gcn/weights/agcn_kinetics_joint.pt"),
-    ("bone", "models/a_gcn/weights/agcn_kinetics_bone.pt"),
+    ("joint", "weights/agcnmod_kinetics_joint.ckpt"),
+    ("bone", "weights/agcnmod_kinetics_bone.ckpt"),
 ]:
     subprocess.call(
         [
@@ -33,7 +33,7 @@ for modality, pretrained_model in [
             "--train",
             "--test",
             "--max_epochs",
-            "30",
+            "20",
             "--optimization_metric",
             "top1acc",
             "--batch_size",

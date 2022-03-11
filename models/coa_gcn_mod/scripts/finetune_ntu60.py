@@ -14,8 +14,8 @@ DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
+    ("xview", "joint", "weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "weights/agcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
         [

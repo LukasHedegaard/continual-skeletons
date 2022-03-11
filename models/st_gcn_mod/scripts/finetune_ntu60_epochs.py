@@ -16,8 +16,8 @@ DS_PATH = DATASETS_PATH / "ntu60"
 for epoch in [1, 3, 5, 10, 15]:
 
     for subset, modality, pretrained_model in [
-        ("xview", "joint", "stgcn/nturgbd60_xview/ntu_cv_stgcn_joint-49-29400.pt"),
-        # ("xsub", "joint", "stgcn/nturgbd60_xsub/ntu_cs_stgcn_joint-49-31300.pt"),
+        ("xview", "joint", "weights/stgcn_ntu60_xview_joint.pt"),
+        ("xsub", "joint", "weights/stgcn_ntu60_xsub_joint.pt"),
     ]:
         subprocess.call(
             [

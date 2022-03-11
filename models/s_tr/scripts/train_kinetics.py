@@ -65,7 +65,9 @@ for modality in ["joint", "bone"]:
             "0.0001",
             "--logging_backend",
             "wandb",
-            "--accelerator",
-            "ddp" if GPUS > 1 else "",
+            # "--accelerator",
+            # "ddp" if GPUS > 1 else "",
+            "--distributed_backend",
+            "horovod",
         ]
     )
