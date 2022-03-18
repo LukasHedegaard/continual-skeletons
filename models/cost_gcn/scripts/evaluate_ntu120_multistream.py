@@ -16,7 +16,7 @@ for subset in ["xset", "xsub"]:
     subprocess.call(
         [
             "python3",
-            "scripts/two_stream_eval.py",
+            "scripts/multi_stream_eval.py",
             "--log_as",
             f"CoStGcn/eval_{DS_NAME}_{subset}_twostream",
             "--labels",
