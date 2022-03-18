@@ -32,7 +32,7 @@ for subset, modality, pretrained_model in [
             "--extract_features_after_layer",
             "fc",
             "--batch_size",
-            "128",
+            "64",
             "--num_workers",
             "8",
             "--dataset_normalization",

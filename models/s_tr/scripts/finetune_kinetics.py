@@ -70,9 +70,7 @@ for modality, pretrained_model in [
             "0.0001",
             "--logging_backend",
             "wandb",
-            # "--accelerator",
-            # "ddp" if GPUS > 1 else "",
-            "--distributed_backend",
-            "horovod",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )
