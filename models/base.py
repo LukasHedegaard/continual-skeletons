@@ -176,7 +176,7 @@ class CoModelBase(RideMixin, co.Sequential):
             ret = super().forward_steps(input, update_state=True, pad_end=False)
 
         if len(getattr(ret, "shape", (0,))) == 3:
-            ret = ret[:, :, -1]
+            ret = ret[:, :, 0]  # the rest may be end-padding
         return ret
 
     def forward_step(self, input, update_state=True):
