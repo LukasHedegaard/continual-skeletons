@@ -1,19 +1,22 @@
-from contextlib import nullcontext
+import math
+from collections import OrderedDict
 from operator import attrgetter
+from typing import Sequence
 
+import continual as co
 import numpy as np
 import torch
 import torch.nn as nn
+from ride import getLogger
 from ride.core import Configs, RideMixin
 from torch import Tensor
 
-from continual import BatchNormCo2d, ConvCo2d, Delay, TensorPlaceholder, Zero, _CoModule
-from continual.batchnorm import normalise_momentum
-from continual.utils import temporary_parameter
 from models.utils import init_weights, unity, zero
 
+logger = getLogger(__name__)
 
-class CoStGcnBase(RideMixin, _CoModule):
+
+class CoModelBase(RideMixin, co.Sequential):
 
     hparams: ...
 
@@ -26,7 +29,7 @@ class CoStGcnBase(RideMixin, _CoModule):
             default="clip",
             choices=["clip", "frame"],
             strategy="choice",
-            description="Run forward on a whole clip or a single frame.",
+            description="Run forward on a whole clip or frame-wise.",
         )
         c.add(
             name="predict_after_frames",
@@ -52,174 +55,176 @@ class CoStGcnBase(RideMixin, _CoModule):
                 "which matches the network delay to the input_shape"
             ),
         )
+        c.add(
+            name="pool_padding",
+            type=int,
+            default=-1,
+            description=(
+                "Padding in pooling layer. If `-1`, a suitable default padding size will be chosen, "
+            ),
+        )
         return c
 
     def on_init_end(self, hparams, *args, **kwargs):
-        if getattr(self.hparams, "profile_model", False):
+        # Shapes from Dataset:
+        # num_channels, num_frames, num_vertices, num_skeletons
+        (C_in, T, V, S) = self.input_shape
+
+        reshape1 = co.Lambda(
+            lambda x: x.permute(0, 3, 2, 1).contiguous().view(-1, S * V * C_in),
+        )
+        data_bn = nn.BatchNorm1d(S * C_in * V)
+        reshape2 = co.Lambda(
+            lambda x: x.view(-1, S, V, C_in)
+            .permute(0, 1, 3, 2)
+            .contiguous()
+            .view(-1, C_in, V)
+        )
+
+        spatial_pool = co.Lambda(lambda x: x.view(-1, S, 256, V).mean(3).mean(1))
+
+        pool_size = self.hparams.pool_size
+        if pool_size == -1:
+            pool_size = math.ceil(
+                (T - self.receptive_field + 2 * self.padding + 1) / self.stride
+            )
+
+        pool_padding = self.hparams.pool_padding
+        if pool_padding == -1:
+            pool_padding = pool_size - math.ceil(
+                (T - self.receptive_field + self.padding + 1) / self.stride
+            )
+        pool = co.AvgPool1d(pool_size, stride=1, padding=max(0, pool_padding))
+
+        fc = co.Linear(256, self.num_classes, channel_dim=1)
+
+        squeeze = co.Lambda(lambda x: x.squeeze(-1), takes_time=True)
+
+        # Initialize weights
+        init_weights(data_bn, bs=1)
+        init_weights(fc, bs=self.num_classes)
+
+        # Add blocks sequentially
+        co.Sequential.__init__(
+            self,
+            OrderedDict(
+                [
+                    ("reshape1", reshape1),
+                    ("data_bn", data_bn),
+                    ("reshape2", reshape2),
+                    ("layers", self.layers),
+                    ("spatial_pool", spatial_pool),
+                    ("pool", pool),
+                    ("fc", fc),
+                    ("squeeze", squeeze),
+                ]
+            ),
+        )
+
+        if self.hparams.forward_mode == "frame":
+            self.call_mode = "forward_steps"  # Set continual forward mode
+
+        logger.info(f"Input shape (C, T, V, S) = {self.input_shape}")
+        logger.info(f"Receptive field {self.receptive_field}")
+        logger.info(f"Init frames {self.receptive_field - 2 * self.padding - 1}")
+        logger.info(f"Pool size {pool_size}")
+        logger.info(f"Stride {self.stride}")
+        logger.info(f"Padding {self.padding}")
+        logger.info(f"Using Continual {self.call_mode}")
+
+        if (
+            getattr(self.hparams, "profile_model", False)
+            and self.hparams.forward_mode == "frame"
+        ):
             (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
 
             # A new output is created every `self.stride` frames.
             self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
 
+    def warm_up(self, dummy, sample: Sequence[int], *args, **kwargs):
+        # Called prior to profiling
+
+        if self.hparams.forward_mode == "clip":
+            return
+
+        self.clean_state()
+
+        N, C, T, S, V = sample.shape
+
+        self._current_input_shape = (N, C, S, V)
+
+        init_frames = self.receptive_field - self.padding - 1
+        init_data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
+        for i in range(init_frames):
+            self.forward_step(init_data[:, :, i])
+
+    def clean_state_on_shape_change(self, shape):
+        if getattr(self, "_current_input_shape", None) != shape:
+            self._current_input_shape = shape
+            self.clean_state()
+
+    def forward(self, input):
+        if self.hparams.forward_mode == "clip":
+            ret = super().forward(input)
+        else:
+            assert self.hparams.forward_mode == "frame"
+            N, C, T, S, V = input.shape
+            self.clean_state_on_shape_change((N, C, S, V))
+
+            if not self.hparams.profile_model:
+                self.clean_state()
+
+            ret = super().forward_steps(input, update_state=True, pad_end=False)
+
+        if len(getattr(ret, "shape", (0,))) == 3:
+            ret = ret[:, :, 0]  # the rest may be end-padding
+        return ret
+
+    def forward_step(self, input, update_state=True):
+        self.clean_state_on_shape_change(input.shape)
+        return super().forward_step(input, update_state)
+
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
+        N, C, T, S, V = input.shape
+        self.clean_state_on_shape_change((N, C, S, V))
+        return super().forward_steps(input, pad_end, update_state)
+
     def validate_attributes(self):
         attrgetter("parameters")(self)
-        for hparam in CoStGcnBase.configs().names:
+        for hparam in CoModelBase.configs().names:
             attrgetter(f"hparams.{hparam}")(self)
 
-        for attribute in [
-            "data_bn",
-            *[f"layers.layer{i+1}" for i in range(10)],
-            "pool",
-            "fc",
-        ]:
+        for attribute in [f"layers.layer{i+1}" for i in range(10)]:
             assert issubclass(type(attrgetter(attribute)(self)), torch.nn.Module)
 
-    def forward(self, x: Tensor) -> Tensor:
-        result = None
-        if self.hparams.forward_mode == "clip" and self.training:
-            result = self.forward_regular_unrolled(x)
-        elif self.hparams.forward_mode == "clip" and not self.training:
-            result = self.forward_regular_naive(x)
-        elif self.hparams.forward_mode == "frame":
-            result = self.forward_frame(x[:, :, 0])
-        else:  # pragma: no cover
-            raise RuntimeError("Model forward_mode should be one of {'clip', 'frame'}.")
-        return result
+    def map_state_dict(
+        self,
+        state_dict: "OrderedDict[str, Tensor]",
+        strict: bool = True,
+    ) -> "OrderedDict[str, Tensor]":
+        def map_key(k: str):
+            # Handle "layers.layer2.0.1.gcn.g_conv.0.weight" -> "layers.layer2.gcn.g_conv.0.weight"
+            k = k.replace("0.1.", "")
 
-    def forward_regular_naive(self, x: Tensor) -> Tensor:
-        """Forward clip.
-        Initialise network with first frames and predict on the last.
-        NB: This function should not be used for training.
-            Because running statistics in the batch norm modules include all inputs,
-            the transient response would add to these statistics.
-            For training, use `forward_regular_unrolled`.
-        """
-        self.clean_states()
-        result = None
-        N, C, T, V, M = x.shape
-        for t in range(self.hparams.predict_after_frames or T):
-            result = self.forward_frame(x[:, :, t])
-        return result
+            # Handle "layers.layer8.0.0.residual.t_conv.weight" ->layers.layer8.residual.t_conv.weight'
+            k = k.replace("0.0.residual", "residual")
+            return k
 
-    def forward_regular(self, x: Tensor) -> Tensor:
-        """Efficient version of forward regular.
-        Compute features layer by layer as in regular convolution.
-        Produce prediction corresponding to last frame.
-        """
-        self.clean_states()
+        long_keys = nn.Module.state_dict(self, keep_vars=True).keys()
 
-        N, C, T, V, M = x.shape
-        x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-
-        x = torch.stack(
-            [
-                self.data_bn(x[:, :, i])
-                .view(N, M, V, C)
-                .permute(0, 1, 3, 2)
-                .contiguous()
-                .view(N * M, C, V)
-                for i in range(T)
-            ],
-            dim=2,
-        )
-
-        for i in range(len(self.layers)):
-            x = self.layers[f"layer{i + 1}"].forward_regular(x)
-            # Discard frames from transient response
-            discard = (
-                self.layers[f"layer{i + 1}"].delay
-                // self.layers[f"layer{i + 1}"].stride
+        if len(long_keys - state_dict.keys()):
+            short2long = {map_key(k): k for k in long_keys}
+            state_dict = OrderedDict(
+                [
+                    (short2long[k], v)
+                    for k, v in state_dict.items()
+                    if strict or k in short2long
+                ]
             )
-            x = x[:, :, discard:]
+        return state_dict
 
-        # N*M, C, T, V
-        _, C_new, T_new, _ = x.shape
-        x = x.view(N, M, C_new, -1, V).mean(4).mean(1)
-        assert self.pool.window_size == T_new
-        x = [self.pool(x[:, :, t]) for t in range(T_new)]
-        d = self.hparams.predict_after_frames - self.delay_conv_blocks
-        i = d if d > 0 else -1
-        x = self.fc(x[i])
-        self.last_output = x
-        return self.last_output
-
-    def forward_regular_unrolled(self, x: Tensor) -> Tensor:
-        """Clip-wise forward without state initialisation, but which is identical to the non-continual component
-
-        Args:
-            x (Tensor): Input Tensor
-
-        Returns:
-            Tensor: Output Tensor
-        """
-        N, C, T, V, M = x.size()
-        x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-        x = self.data_bn.forward_regular_unrolled(x)
-        x = (
-            x.view(N, M, V, C, T)
-            .permute(0, 1, 3, 4, 2)
-            .contiguous()
-            .view(N * M, C, T, V)
-        )
-        for i in range(len(self.layers)):
-            x = self.layers[f"layer{i + 1}"].forward_regular_unrolled(x)
-        # N*M,C,T,V
-        c_new = x.size(1)
-        x = x.view(N, M, c_new, -1)
-        x = x.mean(3).mean(1)
-        x = self.fc(x)
-        return x
-
-    def forward_frame(self, x: Tensor) -> Tensor:
-        self.clean_states_on_shape_change(x.shape)
-        N, C, V, M = x.shape
-        x = x.permute(0, 3, 2, 1).contiguous().view(N, M * V * C, 1)
-        x = self.data_bn(x)
-        x = x.view(N, M, V, C).permute(0, 1, 3, 2).contiguous().view(N * M, C, V)
-        for i in range(len(self.layers)):
-            x = self.layers[f"layer{i + 1}"](x)
-            if type(x) is TensorPlaceholder:
-                return self.last_output
-        # N*M,C,V
-        C_new = x.size(1)
-        x = x.view(N, M, C_new, V).mean(3).mean(1)
-        x = self.pool(x)
-        x = self.fc(x)
-        self.last_output = x
-        return x
-
-    def clean_states(self):
-        for m in self.modules():
-            if hasattr(m, "clean_state"):
-                m.clean_state()
-
-    def clean_states_on_shape_change(self, shape):
-        if not hasattr(self, "_current_input_shape"):
-            self._current_input_shape = shape
-
-        if self._current_input_shape != shape:
-            self.clean_states()
-
-    @property
-    def delay(self):
-        return self.delay_conv_blocks + self.pool.delay
-
-    @property
-    def delay_conv_blocks(self):
-        d = 0
-        for i in range(len(self.layers)):
-            d += self.layers[f"layer{i + 1}"].delay
-            d = d // self.layers[f"layer{i + 1}"].stride
-        return d
-
-    @property
-    def stride(self):
-        s = int(
-            np.prod(
-                [self.layers[f"layer{i + 1}"].stride for i in range(len(self.layers))]
-            )
-        )
-        return s
+    def map_loaded_weights(self, file, loaded_state_dict):
+        return self.map_state_dict(loaded_state_dict)
 
 
 class GraphConvolution(nn.Module):
@@ -255,39 +260,20 @@ class GraphConvolution(nn.Module):
     def forward(self, x):
         N, C, T, V = x.size()
         A = self.A * self.graph_attn
-        hidden_ = None
+        sum_ = None
         for i in range(self.num_subset):
             x_a = x.view(N, C * T, V)
             z = self.g_conv[i](torch.matmul(x_a, A[i]).view(N, C, T, V))
-            hidden_ = z + hidden_ if hidden_ is not None else z
-        hidden_ = self.bn(hidden_)
-        hidden_ += self.gcn_residual(x)
-        return self.relu(hidden_)
+            sum_ = z + sum_ if sum_ is not None else z
+        sum_ = self.bn(sum_)
+        sum_ += self.gcn_residual(x)
+        return self.relu(sum_)
 
 
-class CoGraphConvolution(GraphConvolution, _CoModule):
-    def __init__(self, in_channels, out_channels, A, bn_momentum=0.1, window_size=1):
-        self.unnormalised_momentum = bn_momentum
-        self.momentum = normalise_momentum(bn_momentum, window_size)
-        GraphConvolution.__init__(self, in_channels, out_channels, A, self.momentum)
-
-    def forward(self, x):
-        x = x.unsqueeze(dim=2)
-        x = GraphConvolution.forward(self, x)
-        x = x.squeeze(dim=2)
-        return x
-
-    def forward_regular(self, input: Tensor) -> Tensor:
-        return self.forward_regular_unrolled(input)
-
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        with temporary_parameter(
-            self.bn, "momentum", self.unnormalised_momentum
-        ), temporary_parameter(
-            self.gcn_residual[-1], "momentum", self.unnormalised_momentum
-        ) if self.in_channels != self.out_channels else nullcontext():
-            output = GraphConvolution.forward(self, input)
-        return output
+def CoGraphConvolution(in_channels, out_channels, A, bn_momentum=0.1):
+    return co.forward_stepping(
+        GraphConvolution(in_channels, out_channels, A, bn_momentum)
+    )
 
 
 class TemporalConvolution(nn.Module):
@@ -318,7 +304,37 @@ class TemporalConvolution(nn.Module):
         return x
 
 
-class StGcnBlock(nn.Module):
+def CoTemporalConvolution(
+    in_channels,
+    out_channels,
+    kernel_size=9,
+    padding=0,
+    stride=1,
+) -> co.Sequential:
+
+    if padding == "equal":
+        padding = int((kernel_size - 1) / 2)
+
+    t_conv = co.Conv2d(
+        in_channels,
+        out_channels,
+        kernel_size=(kernel_size, 1),
+        padding=(padding, 0),
+        stride=(stride, 1),
+    )
+
+    bn = nn.BatchNorm2d(out_channels)
+
+    init_weights(t_conv, bs=1)
+    init_weights(bn, bs=1)
+
+    seq = []
+    seq.append(("t_conv", t_conv))
+    seq.append(("bn", bn))
+    return co.Sequential(OrderedDict(seq))
+
+
+class SpatioTemporalBlock(nn.Module):
     def __init__(
         self,
         in_channels,
@@ -331,7 +347,7 @@ class StGcnBlock(nn.Module):
         GraphConv=GraphConvolution,
         TempConv=TemporalConvolution,
     ):
-        super(StGcnBlock, self).__init__()
+        super(SpatioTemporalBlock, self).__init__()
         equal_padding = int((temporal_kernel_size - 1) / 2)
         if temporal_padding < 0:
             temporal_padding = equal_padding
@@ -371,132 +387,60 @@ class StGcnBlock(nn.Module):
         return self.relu(z + r)
 
 
-class CoTemporalConvolution(torch.nn.Module, _CoModule):
-    def __init__(
-        self,
-        in_channels,
+def CoSpatioTemporalBlock(
+    in_channels,
+    out_channels,
+    A,
+    stride=1,
+    residual=True,
+    window_size=1,
+    padding=0,
+    CoGraphConv=CoGraphConvolution,
+    CoTempConv=CoTemporalConvolution,
+):
+    window_size = int(window_size)  # Currently unused. Could be used BN momentum
+
+    gcn = CoGraphConv(in_channels, out_channels, A, bn_momentum=0.1)
+    tcn = CoTempConv(
         out_channels,
-        kernel_size=9,
-        padding=0,
-        stride=1,
-        extra_delay: int = None,
-        window_size=1,  # Used for BN normalisation
-    ):
-        super(CoTemporalConvolution, self).__init__()
-        self.kernel_size = kernel_size
-        if padding == "equal":
-            padding = int((self.kernel_size - 1) / 2)
-        self.padding = padding
-        self.t_conv = ConvCo2d(
-            in_channels,
-            out_channels,
-            kernel_size=(kernel_size, 1),
-            padding=(self.padding, 0),
-            stride=(stride, 1),
-        )
-        self.bn = BatchNormCo2d(out_channels, window_size=window_size)
-        if extra_delay:
-            self.extra_delay = Delay(extra_delay)
-        init_weights(self.t_conv, bs=1)
-        init_weights(self.bn, bs=1)
-
-    def forward(self, x):
-        x = self.t_conv(x)
-        if type(x) is TensorPlaceholder:  # Support strided conv
-            return x
-        x = self.bn(x)
-        if hasattr(self, "extra_delay"):
-            x = self.extra_delay(x)
-        return x
-
-    def forward_regular(self, input: Tensor) -> Tensor:
-        x = self.t_conv.forward_regular(input)
-        x = self.bn.forward_regular(x)
-        return x
-
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        x = self.t_conv.forward_regular_unrolled(input)
-        x = self.bn.forward_regular_unrolled(x)
-        return x
-
-    @property
-    def delay(self):
-        d = self.t_conv.delay
-        if hasattr(self, "extra_delay"):
-            d += self.extra_delay.delay
-        return d
-
-
-class CoStGcnBlock(torch.nn.Module, _CoModule):
-    def __init__(
-        self,
-        in_channels,
         out_channels,
-        A,
-        stride=1,
-        residual=True,
-        window_size=1,
-        padding=0,
-        CoGraphConv=CoGraphConvolution,
-        CoTempConv=CoTemporalConvolution,
-    ):
-        super(CoStGcnBlock, self).__init__()
-        window_size = int(window_size)
-        self.stride = stride
-        self.gcn = CoGraphConv(in_channels, out_channels, A, window_size=window_size)
-        self.tcn = CoTempConv(
-            out_channels,
-            out_channels,
-            stride=stride,
-            window_size=window_size,
-            padding=padding,
+        stride=stride,
+        padding=padding,
+    )
+    relu = torch.nn.ReLU()
+
+    if not residual:
+        return co.Sequential(OrderedDict([("gcn", gcn), ("tcn", tcn), ("relu", relu)]))
+
+    if (in_channels == out_channels) and (stride == 1):
+        return co.Sequential(
+            co.Residual(
+                co.Sequential(OrderedDict([("gcn", gcn), ("tcn", tcn)])),
+                phantom_padding=True,
+            ),
+            relu,
         )
-        self.relu = torch.nn.ReLU()
-        if not residual:
-            self.residual = Zero()
-        elif (in_channels == out_channels) and (self.stride == 1):
-            self.residual = Delay(self.tcn.kernel_size // 2, temporal_fill="zeros")
-        else:
-            self.residual = CoTempConv(
-                in_channels,
-                out_channels,
-                kernel_size=1,
-                stride=self.stride,
-                extra_delay=(self.tcn.kernel_size // 2) // self.stride,
-                window_size=window_size // self.stride,
-            )
 
-    def forward(self, x):
-        z = self.tcn(self.gcn(x))
-        r = self.residual(x)
-        if type(z) is TensorPlaceholder:
-            return TensorPlaceholder(z.shape)
-        return self.relu(z + r)
+    residual = CoTempConv(in_channels, out_channels, kernel_size=1, stride=stride)
 
-    def forward_regular(self, x):
-        NM, C, T, V = x.shape
-        res = []
-        for t in range(T):
-            z = self.tcn(self.gcn(x[:, :, t]))
-            r = self.residual(x[:, :, t])
-            if type(z) is not TensorPlaceholder:
-                res.append(self.relu(z + r))
-        return torch.stack(res, dim=2)
+    phantom_padding = tcn.receptive_field - 2 * tcn.padding != 1
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        z = self.tcn.forward_regular_unrolled(self.gcn.forward_regular_unrolled(input))
-        if type(self.residual) is not Zero:
-            # Centered residuals:
-            # If temporal zero-padding is removed, the feature-map shrinks at every temporal conv
-            # The residual should shrink correspondingly, i.e. (kernel_size - 1) / 2) on each side
-            residual_shrink = self.tcn.kernel_size // 2
-            r = self.residual.forward_regular_unrolled(
-                input[:, :, residual_shrink:-residual_shrink]
-            )
-        else:
-            r = self.residual.forward_regular_unrolled(input)
-        return self.relu(z + r)
+    delay = tcn.delay // stride
+    if phantom_padding:
+        delay = delay // 2
 
-    @property
-    def delay(self):
-        return self.tcn.delay
+    return co.Sequential(
+        co.BroadcastReduce(
+            co.Sequential(
+                OrderedDict(
+                    [
+                        ("residual", residual),
+                        ("align", co.Delay(delay, auto_shrink=phantom_padding)),
+                    ]
+                )
+            ),
+            co.Sequential(OrderedDict([("gcn", gcn), ("tcn", tcn)])),
+            auto_delay=False,
+        ),
+        relu,
+    )

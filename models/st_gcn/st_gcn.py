@@ -6,25 +6,20 @@ import ride  # isort:skip
 import torch.nn as nn
 
 from datasets import datasets
-from models.base import StGcnBlock
+from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
 
 class StGcn(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.SgdOneCycleOptimizer,
     ride.finetune.Finetunable,
     datasets.GraphDatasets,
 ):
     def __init__(self, hparams):
         # Shapes from Dataset:
-        (
-            num_channels,
-            num_frames,
-            num_vertices,
-            num_skeletons,
-        ) = self.input_shape
+        (num_channels, num_frames, num_vertices, num_skeletons) = self.input_shape
         num_classes = self.num_classes
         A = self.graph.A
 
@@ -32,16 +27,16 @@ class StGcn(
         self.data_bn = nn.BatchNorm1d(num_skeletons * num_channels * num_vertices)
         self.layers = nn.ModuleDict(
             {
-                "layer1": StGcnBlock(num_channels, 64, A, residual=False),
-                "layer2": StGcnBlock(64, 64, A),
-                "layer3": StGcnBlock(64, 64, A),
-                "layer4": StGcnBlock(64, 64, A),
-                "layer5": StGcnBlock(64, 128, A, stride=2),
-                "layer6": StGcnBlock(128, 128, A),
-                "layer7": StGcnBlock(128, 128, A),
-                "layer8": StGcnBlock(128, 256, A, stride=2),
-                "layer9": StGcnBlock(256, 256, A),
-                "layer10": StGcnBlock(256, 256, A),
+                "layer1": SpatioTemporalBlock(num_channels, 64, A, residual=False),
+                "layer2": SpatioTemporalBlock(64, 64, A),
+                "layer3": SpatioTemporalBlock(64, 64, A),
+                "layer4": SpatioTemporalBlock(64, 64, A),
+                "layer5": SpatioTemporalBlock(64, 128, A, stride=2),
+                "layer6": SpatioTemporalBlock(128, 128, A),
+                "layer7": SpatioTemporalBlock(128, 128, A),
+                "layer8": SpatioTemporalBlock(128, 256, A, stride=2),
+                "layer9": SpatioTemporalBlock(256, 256, A),
+                "layer10": SpatioTemporalBlock(256, 256, A),
             }
         )
         self.fc = nn.Linear(256, num_classes)

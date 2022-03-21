@@ -1,57 +1,58 @@
+import continual as co
 import pytest
 import torch
 
+from datasets.ntu_rgbd import graph
+from models.a_gcn.a_gcn import AdaptiveGraphConvolution
 from models.a_gcn_mod.a_gcn_mod import AGcnMod
-from models.coa_gcn_mod.coa_gcn_mod import CoAGcnMod
+from models.coa_gcn_mod.coa_gcn_mod import CoAdaptiveGraphConvolution, CoAGcnMod
 
 
-def test_StGcnModBlock_residual_eq_channels():
-    hparams = dummy_hparams()
-    reg = AGcnMod(hparams)
-    co = CoAGcnMod(hparams)
+def test_CoAdaptiveGraphConvolution():
+    SEQ_LEN = 4
+    BATCH_SIZE = 2
+    VERTICES = 25
+    IN_CHANNELS = 3
+    OUT_CHANNELS = 4
+    A = graph.A
+
+    agc = co.forward_stepping(AdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A))
+
+    tsagc = CoAdaptiveGraphConvolution(IN_CHANNELS, OUT_CHANNELS, A)
 
     #  Transfer weights
-    state_dict = reg.state_dict()
-    co.load_state_dict(state_dict)
+    state_dict = agc.state_dict()
+    tsagc.load_state_dict(state_dict)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
-    reg.eval()
-    co.eval()
+    agc.eval()
+    tsagc.eval()
 
-    # Prepare data
-    sample = next(iter(reg.train_dataloader()))
-    N, C, T, V, M = sample.size()
-    sample = sample.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-    sample = reg.data_bn(sample)
-    sample = (
-        sample.view(N, M, V, C, T)
-        .permute(0, 1, 3, 4, 2)
-        .contiguous()
-        .view(N * M, C, T, V)
-    )
+    # Prepare sample
+    sample_all = torch.randn(BATCH_SIZE, IN_CHANNELS, SEQ_LEN, VERTICES)
+    sample_step0 = sample_all[:, :, 0]
+    sample_step1 = sample_all[:, :, 1]
 
-    T = sample.shape[2]
-    kernel_size = 9
-    pad = reg.layers.layer1.tcn.padding
+    # Reg
+    all_steps_agc = agc.forward(sample_all)
+    step0_agc = agc.forward_step(sample_step0)
+    step1_agc = agc.forward_step(sample_step1)
 
-    # Forward
-    target = reg.layers.layer1(sample)
+    assert torch.allclose(all_steps_agc[:, :, 0], step0_agc, atol=1e-5)
+    assert torch.allclose(all_steps_agc[:, :, 1], step1_agc, atol=1e-5)
 
-    # Frame-by-frame
-    output = []
-    for i in range(T):
-        output.append(co.layers.layer1(sample[:, :, i]))
+    # TimeSliced
+    all_steps_tsagc = tsagc.forward(sample_all)
+    step0_tsagc = tsagc.forward_step(sample_step0)
+    step1_tsagc = tsagc.forward_step(sample_step1)
 
-    checks = [
-        torch.allclose(
-            target[:, :, t],
-            output[t + (kernel_size - 1 - pad)],
-            atol=5e-5,
-        )
-        for t in range(pad, T - (kernel_size - 1))
-    ]
+    assert torch.equal(all_steps_tsagc[:, :, 0], step0_tsagc)  # Equal!
+    assert torch.equal(all_steps_tsagc[:, :, 1], step1_tsagc)  # Equal!
 
-    assert all(checks)
+    # Compare regular with time-sliced
+    assert torch.allclose(step0_agc, step0_tsagc, atol=5e-4)
+    assert torch.allclose(step1_agc, step1_tsagc, atol=5e-4)
+    assert torch.allclose(all_steps_agc, all_steps_tsagc, atol=5e-4)
 
 
 def dummy_hparams():
@@ -59,6 +60,7 @@ def dummy_hparams():
     d["max_epochs"] = 1
     d["batch_size"] = 2
     d["dataset_name"] = "dummy"
+    d["accumulate_grad_batches"] = 1
     return d
 
 
@@ -69,7 +71,7 @@ def test_AGcnMod_dummy_params():
     co = CoAGcnMod(hparams)
 
     #  Transfer weights
-    co.load_state_dict(reg.state_dict())
+    co.load_state_dict(co.map_state_dict(reg.state_dict()))
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()
@@ -78,13 +80,21 @@ def test_AGcnMod_dummy_params():
     # Prepare sample
     sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
 
-    # Forward
-    o_reg = reg(sample)
-    o_co1 = co.forward(sample)
-    o_co2 = co.forward_regular_unrolled(sample)
+    # Target
+    target = reg(sample)
+    ks = 3
+    target_inds = torch.topk(target, ks).indices
 
-    assert torch.allclose(o_reg, o_co1, rtol=5e-4)
-    assert torch.allclose(o_reg, o_co2, rtol=1e-4)
+    # forward
+    o_co1 = co.forward(sample)
+    assert torch.equal(target_inds, torch.topk(o_co1, ks).indices)
+    # Would be exact if pool_size 75 was used.
+    # However, this would not work for continual inferece.
+    # assert torch.allclose(target, o_co1, rtol=5e-5)
+
+    # forward_steps
+    o_co2 = co.forward_steps(sample)
+    assert torch.equal(target_inds, torch.topk(o_co2, ks).indices)
     assert torch.allclose(o_co1, o_co2, rtol=1e-4)
 
 

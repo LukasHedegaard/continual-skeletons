@@ -55,7 +55,7 @@ subprocess.call(
         "--dataset_test_labels",
         str(DS_PATH / DS_SUBSET / "val_label.pkl"),
         "--finetune_from_weights",
-        "models/st_gcn/weights/stgcn_ntu60_xview_joint.pt",
+        "weights/stgcn_ntu60_xview_joint.pt",
         "--logging_backend",
         "wandb",
         "--pool_size",

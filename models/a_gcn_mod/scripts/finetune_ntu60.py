@@ -10,12 +10,19 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn/weights/agcn_ntu60_xview_joint.pt"),
-    ("xsub", "joint", "models/a_gcn/weights/agcn_ntu60_xsub_joint.pt"),
+    ("xview", "joint", "weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "weights/agcn_ntu60_xsub_joint.pt"),
+    ("xview", "bone", "weights/agcn_ntu60_xview_bone.pt"),
+    ("xsub", "bone", "weights/agcn_ntu60_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
@@ -24,18 +31,17 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "1",
+            str(GPUS),
             "--train",
             "--test",
-            "--profile_model",
             "--max_epochs",
-            "15",
+            "30",
             "--optimization_metric",
             "top1acc",
             "--batch_size",
-            "12",
+            str(BATCH_SIZE),
             "--num_workers",
-            "12",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -61,10 +67,12 @@ for subset, modality, pretrained_model in [
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.025",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            str(LEARNING_RATE),
             "--weight_decay",
             "0.0001",
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )

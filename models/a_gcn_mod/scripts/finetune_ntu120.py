@@ -10,12 +10,19 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+
 DS_NAME = "ntu120"
-DS_PATH = DATASETS_PATH / "ntu120"
+DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xset", "joint", "agcn/nturgbd120_xset/ntu120_xset_agcn_joint-53-45954.pt"),
-    ("xsub", "joint", "agcn/nturgbd120_xsub/ntu120_xsub_agcn_joint-35-35424.pt"),
+    ("xset", "joint", "weights/agcn_ntu120_xset_joint.pt"),
+    ("xsub", "joint", "weights/agcn_ntu120_xsub_joint.pt"),
+    ("xset", "bone", "weights/agcn_ntu120_xset_bone.pt"),
+    ("xsub", "bone", "weights/agcn_ntu120_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
@@ -24,18 +31,17 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "1",
+            str(GPUS),
             "--train",
-            "--profile_model",
+            "--test",
             "--max_epochs",
-            "15",
+            "30",
             "--optimization_metric",
             "top1acc",
-            "--test",
             "--batch_size",
-            "12",
+            str(BATCH_SIZE),
             "--num_workers",
-            "8",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -55,18 +61,18 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.04",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            str(LEARNING_RATE),
             "--weight_decay",
             "0.0001",
-            "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )

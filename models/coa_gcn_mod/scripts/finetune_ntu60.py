@@ -14,29 +14,27 @@ DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xview_joint.ckpt"),
-    ("xsub", "joint", "models/a_gcn_mod/weights/agcnmod_ntu60_xsub_joint.ckpt"),
+    ("xview", "joint", "weights/agcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "weights/agcn_ntu60_xsub_joint.pt"),
 ]:
     subprocess.call(
         [
             "python3",
-            "models/st_gcn_mod/st_gcn_mod.py",
+            "models/coa_gcn_mod/coa_gcn_mod.py",
             "--id",
-            f"{DS_NAME}_{subset}_{modality}_finetune",
+            f"{DS_NAME}_{subset}_{modality}_finetune_switch_einsum",
             "--gpus",
-            "4",
-            "--distributed_backend",
-            "ddp",
+            "2",
             "--train",
             "--max_epochs",
-            "20",
+            "30",
             "--optimization_metric",
             "top1acc",
             "--test",
             "--batch_size",
             "12",
             "--num_workers",
-            "12",
+            "10",
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -63,7 +61,7 @@ for subset, modality, pretrained_model in [
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.075",  # Linear scaling rule: 0,1 / 64 * 12 * 4
+            "0.075",
             "--weight_decay",
             "0.0001",
             "--logging_backend",

@@ -139,3 +139,5 @@ features/
 # Queue system
 queue/history/
 queue/next.sh
+
+.vscode

@@ -10,12 +10,19 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+
 DS_NAME = "ntu120"
-DS_PATH = DATASETS_PATH / "ntu120"
+DS_PATH = DATASETS_PATH / DS_NAME
 
 for subset, modality, pretrained_model in [
-    ("xset", "joint", "models/st_gcn/weights/stgcn_ntu120_xset_joint.pt"),
-    ("xsub", "joint", "models/st_gcn/weights/stgcn_ntu120_xsub_joint.pt"),
+    ("xset", "joint", "weights/stgcn_ntu120_xset_joint.pt"),
+    ("xsub", "joint", "weights/stgcn_ntu120_xsub_joint.pt"),
+    ("xset", "bone", "weights/stgcn_ntu120_xset_bone.pt"),
+    ("xsub", "bone", "weights/stgcn_ntu120_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
@@ -24,19 +31,17 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "2",
-            "--distributed_backend",
-            "ddp",
+            str(GPUS),
             "--train",
+            "--test",
             "--max_epochs",
-            "15",
+            "30",
             "--optimization_metric",
             "top1acc",
-            "--test",
             "--batch_size",
-            "12",
+            str(BATCH_SIZE),
             "--num_workers",
-            "12",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -62,10 +67,12 @@ for subset, modality, pretrained_model in [
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.05",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            str(LEARNING_RATE),
             "--weight_decay",
             "0.0001",
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )

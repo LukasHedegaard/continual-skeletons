@@ -1,8 +1,9 @@
-import pytest
+from collections import OrderedDict
+
 import torch
 
 from datasets import ntu_rgbd
-from models.base import CoStGcnBlock, StGcnBlock
+from models.base import CoSpatioTemporalBlock, SpatioTemporalBlock
 from models.cost_gcn_mod.cost_gcn_mod import CoStGcnMod
 from models.st_gcn_mod.st_gcn_mod import StGcnMod
 
@@ -13,43 +14,44 @@ def test_StGcnModBlock_residual_eq_channels():
     A = ntu_rgbd.graph.A
     stride = 1
     residual = True
+    padding = 4
 
-    reg = StGcnBlock(in_channels, out_channels, A, stride, residual)
-    co = CoStGcnBlock(in_channels, out_channels, A, stride, residual)
+    reg = SpatioTemporalBlock(
+        in_channels, out_channels, A, stride, residual, temporal_padding=padding
+    )
+    mod = SpatioTemporalBlock(
+        in_channels, out_channels, A, stride, residual, temporal_padding=0
+    )
+    co = CoSpatioTemporalBlock(in_channels, out_channels, A, stride, residual)
 
     #  Transfer weights
     state_dict = reg.state_dict()
-    co.load_state_dict(state_dict)
+    mod.load_state_dict(state_dict)
+
+    state_dict = OrderedDict([("0.1." + k, v) for k, v in state_dict.items()])
+    co.load_state_dict(state_dict, strict=True)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()
+    mod.eval()
     co.eval()
 
     # Prepare data
-    kernel_size = 9
     T = 20
     B = 2
     num_nodes = ntu_rgbd.graph.A.shape[-1]
     sample = torch.rand((B, in_channels, T, num_nodes))
 
     # Forward
-    target = reg(sample)
+    target = reg.forward(sample)
+
+    # Mod
+    mod_target = mod.forward(sample)
+    assert torch.allclose(target[:, :, padding:-padding], mod_target)
 
     # Frame-by-frame
-    output = []
-    for i in range(T):
-        output.append(co(sample[:, :, i]))
-
-    checks = [
-        torch.allclose(
-            target[:, :, t],
-            output[t + (kernel_size - 1 - reg.tcn.padding)],
-            atol=5e-7,
-        )
-        for t in range(reg.tcn.padding, T - (kernel_size - 1))
-    ]
-
-    assert all(checks)
+    output = co.forward(sample)
+    assert torch.allclose(target[:, :, padding:-padding], output)
 
 
 def dummy_hparams():
@@ -57,6 +59,7 @@ def dummy_hparams():
     d["max_epochs"] = 1
     d["batch_size"] = 2
     d["dataset_name"] = "dummy"
+    d["accumulate_grad_batches"] = 1
     return d
 
 
@@ -67,7 +70,7 @@ def test_StGcnMod_dummy_params():
     co = CoStGcnMod(hparams)
 
     #  Transfer weights
-    co.load_state_dict(reg.state_dict())
+    co.load_state_dict(co.map_state_dict(reg.state_dict()), strict=True)
 
     # Set to eval mode (otherwise batchnorm doesn't match)
     reg.eval()
@@ -76,13 +79,15 @@ def test_StGcnMod_dummy_params():
     # Prepare sample
     sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
 
-    # Forward
-    o_co1 = co.forward_regular(sample)
-    o_co2 = co.forward_regular_unrolled(sample)
-    o_reg = reg(sample)
+    o_reg = reg.forward(sample)
 
-    assert torch.allclose(o_reg, o_co1, rtol=5e-5)
-    assert torch.allclose(o_reg, o_co2, rtol=5e-5)
+    # Forward
+    o_co1 = co.forward(sample)
+    co.clean_state()
+    o_co2 = co.forward_steps(sample)
+
+    assert torch.allclose(o_co1, o_co2, atol=5e-4)
+    assert torch.allclose(o_reg, o_co1, atol=5e-4)
 
 
 def real_hparams():
@@ -111,30 +116,3 @@ def real_hparams():
         "finetune_from_weights"
     ] = "models/st_gcn_mod/weights/stgcnmod_ntu60_xview_joint.ckpt"
     return d
-
-
-@pytest.mark.skip(reason="Model weights and dataset not available in CI/CD system")
-def test_StGcnMod_real_params():
-    # Model definition
-    hparams = real_hparams()
-    reg = StGcnMod(hparams)
-    co = CoStGcnMod(hparams)
-
-    #  Transfer weights
-    co.load_state_dict(reg.state_dict())
-
-    # Set to eval mode (otherwise batchnorm doesn't match)
-    reg.eval()
-    co.eval()
-
-    # Prepare sample
-    # sample = torch.randn(reg.hparams.batch_size, *reg.input_shape)
-    sample = next(iter(reg.train_dataloader()))[0]
-
-    # Forward
-    o_co1 = co.forward_clip(sample)
-    o_co2 = co.forward_clip_efficient(sample)
-    o_reg = reg(sample)
-
-    assert torch.allclose(o_reg, o_co1, rtol=5e-5)
-    assert torch.allclose(o_reg, o_co2, rtol=5e-5)

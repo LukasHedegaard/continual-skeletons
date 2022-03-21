@@ -1,2 +1,4 @@
 ride>=0.3
 ptflops>=0.6
+continual-inference>=0.14.0
+ 

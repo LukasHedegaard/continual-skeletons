@@ -36,7 +36,7 @@ clean:
 ## Test the setup
 test:
 	@echo ⚡⚡⚡ Testing ⚡⚡⚡
-	py.test --cov continual --cov models --cov datasets --cov-report term-missing 
+	py.test --cov models --cov datasets --cov-report term-missing 
 
 
 ## Upload to codecov.io

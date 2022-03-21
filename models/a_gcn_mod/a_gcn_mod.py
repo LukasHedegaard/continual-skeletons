@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from datasets import datasets
-from models.base import StGcnBlock
+from models.base import SpatioTemporalBlock
 from models.utils import init_weights
 
 
@@ -66,7 +66,7 @@ class AdaptiveGraphConvolutionMod(nn.Module):
 
 class AGcnMod(
     ride.RideModule,
-    ride.TopKAccuracyMetric(1),
+    ride.TopKAccuracyMetric(1, 3, 5),
     ride.SgdOneCycleOptimizer,
     ride.finetune.Finetunable,
     datasets.GraphDatasets,
@@ -85,16 +85,16 @@ class AGcnMod(
         # fmt: off
         self.layers = nn.ModuleDict(
             {
-                "layer1": StGcnBlock(num_channels, 64, A, GraphConv=GraphConv, residual=False, temporal_padding=0),
-                "layer2": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer3": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer4": StGcnBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer5": StGcnBlock(64, 128, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
-                "layer6": StGcnBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer7": StGcnBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer8": StGcnBlock(128, 256, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
-                "layer9": StGcnBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
-                "layer10": StGcnBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer1": SpatioTemporalBlock(num_channels, 64, A, GraphConv=GraphConv, residual=False, temporal_padding=0),
+                "layer2": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer3": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer4": SpatioTemporalBlock(64, 64, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer5": SpatioTemporalBlock(64, 128, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
+                "layer6": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer7": SpatioTemporalBlock(128, 128, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer8": SpatioTemporalBlock(128, 256, A, GraphConv=GraphConv, temporal_padding=0, stride=1),
+                "layer9": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
+                "layer10": SpatioTemporalBlock(256, 256, A, GraphConv=GraphConv, temporal_padding=0),
             }
         )
         # fmt: on

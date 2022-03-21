@@ -10,12 +10,19 @@ ROOT_PATH = Path(os.getenv("ROOT_PATH", default=""))
 LOGS_PATH = Path(os.getenv("LOGS_PATH", default="logs"))
 DATASETS_PATH = Path(os.getenv("DATASETS_PATH", default="datasets"))
 
+GPUS = int(os.getenv("GPUS", default="1"))
+BATCH_SIZE = 8
+# Adjust LR using linear scaling rule
+LEARNING_RATE = 0.1 / 64 * BATCH_SIZE * GPUS
+
 DS_NAME = "ntu60"
 DS_PATH = DATASETS_PATH / "ntu60"
 
 for subset, modality, pretrained_model in [
-    ("xview", "joint", "stgcn/nturgbd60_xview/ntu_cv_stgcn_joint-49-29400.pt"),
-    ("xsub", "joint", "stgcn/nturgbd60_xsub/ntu_cs_stgcn_joint-49-31300.pt"),
+    ("xview", "joint", "weights/stgcn_ntu60_xview_joint.pt"),
+    ("xsub", "joint", "weights/stgcn_ntu60_xsub_joint.pt"),
+    ("xview", "bone", "weights/stgcn_ntu60_xview_bone.pt"),
+    ("xsub", "bone", "weights/stgcn_ntu60_xsub_bone.pt"),
 ]:
     subprocess.call(
         [
@@ -24,17 +31,17 @@ for subset, modality, pretrained_model in [
             "--id",
             f"{DS_NAME}_{subset}_{modality}_finetune",
             "--gpus",
-            "1",
+            str(GPUS),
             "--train",
+            "--test",
             "--max_epochs",
-            "15",
+            "30",
             "--optimization_metric",
             "top1acc",
-            "--test",
             "--batch_size",
-            "12",
+            str(BATCH_SIZE),
             "--num_workers",
-            "8",
+            str(BATCH_SIZE // 2),
             "--dataset_normalization",
             "0",
             "--dataset_name",
@@ -54,18 +61,18 @@ for subset, modality, pretrained_model in [
             "--dataset_test_labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
+            pretrained_model,
             "--unfreeze_from_epoch",
             "0",
             "--unfreeze_layers_initial",
             "-1",
             "--learning_rate",
-            "0.04",  # Linear scaling rule: 0,1 / 64 * 16 = 0.025
+            str(LEARNING_RATE),
             "--weight_decay",
             "0.0001",
-            "--finetune_from_weights",
-            str(ROOT_PATH / "pretrained_models" / pretrained_model),
             "--logging_backend",
             "wandb",
+            "--accelerator",
+            "ddp" if GPUS > 1 else "",
         ]
     )
