@@ -17,12 +17,12 @@ subprocess.call(
         "python3",
         "scripts/multi_stream_eval.py",
         "--log_as",
-        f"CoSTrMod/eval_{DS_NAME}_twostream",
+        f"CoStGcn/eval_{DS_NAME}_onestream",
         "--labels",
         str(DS_PATH / "val_label.pkl"),
         "--pred1",
-        str(ROOT_PATH / "preds" / f"costrmod_{DS_NAME}_joint.npy"),
-        "--pred2",
-        str(ROOT_PATH / "preds" / f"costrmod_{DS_NAME}_bone.npy"),
+        str(ROOT_PATH / "preds" / f"costgcn_{DS_NAME}_joint.npy"),
+        # "--pred2",
+        # str(ROOT_PATH / "preds" / f"costgcn_{DS_NAME}_bone.npy"),
     ]
 )

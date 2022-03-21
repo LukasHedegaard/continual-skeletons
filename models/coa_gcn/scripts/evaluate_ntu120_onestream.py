@@ -18,12 +18,12 @@ for subset in ["xset", "xsub"]:
             "python3",
             "scripts/multi_stream_eval.py",
             "--log_as",
-            f"CoStGcnMod/eval_{DS_NAME}_{subset}_twostream",
+            f"CoAGcn/eval_{DS_NAME}_{subset}_onestream",
             "--labels",
             str(DS_PATH / subset / "val_label.pkl"),
             "--pred1",
-            str(ROOT_PATH / "preds" / f"costgcnmod_{DS_NAME}_{subset}_joint.npy"),
-            "--pred2",
-            str(ROOT_PATH / "preds" / f"costgcnmod_{DS_NAME}_{subset}_bone.npy"),
+            str(ROOT_PATH / "preds" / f"coagcn_{DS_NAME}_{subset}_joint.npy"),
+            # "--pred2",
+            # str(ROOT_PATH / "preds" / f"coagcn_{DS_NAME}_{subset}_bone.npy"),
         ]
     )

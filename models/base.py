@@ -141,7 +141,7 @@ class CoModelBase(RideMixin, co.Sequential):
             # A new output is created every `self.stride` frames.
             self.input_shape = (num_channels, self.stride, num_vertices, num_skeletons)
 
-    def warm_up(self, input_shape: Sequence[int]):
+    def warm_up(self, dummy, sample: Sequence[int], *args, **kwargs):
         # Called prior to profiling
 
         if self.hparams.forward_mode == "clip":
@@ -149,13 +149,14 @@ class CoModelBase(RideMixin, co.Sequential):
 
         self.clean_state()
 
-        N, C, T, S, V = input_shape
+        N, C, T, S, V = sample.shape
 
         self._current_input_shape = (N, C, S, V)
 
         init_frames = self.receptive_field - self.padding - 1
         init_data = torch.randn((N, C, init_frames, S, V)).to(device=self.device)
-        self.forward_steps(init_data)
+        for i in range(init_frames):
+            self.forward_step(init_data[:, :, i])
 
     def clean_state_on_shape_change(self, shape):
         if getattr(self, "_current_input_shape", None) != shape:
@@ -176,7 +177,7 @@ class CoModelBase(RideMixin, co.Sequential):
             ret = super().forward_steps(input, update_state=True, pad_end=False)
 
         if len(getattr(ret, "shape", (0,))) == 3:
-            ret = ret[:, :, -1]
+            ret = ret[:, :, 0]  # the rest may be end-padding
         return ret
 
     def forward_step(self, input, update_state=True):

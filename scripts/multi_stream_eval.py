@@ -45,7 +45,7 @@ def aggregate_preds(preds: List[np.array], method=np.add):
 def multi_stream_eval(
     labels: str,
     pred1: str,
-    pred2: str,
+    pred2: str = None,
     pred3: str = None,
     pred4: str = None,
     log_as: str = "",
@@ -54,7 +54,10 @@ def multi_stream_eval(
     preds = aggregate_preds([load_preds(p) for p in pred_paths if p])
     targets = np.array(load_labels(labels))
     if len(preds.shape) == 3:
-        preds = preds[:, :, preds.shape[-1] // 2]  # Take middle
+        preds = preds[:, :, 0]  # Take first: Later entries are end-padding
+        # Flatten step preds and repeat targets accordingly
+        # targets = targets[:, None].repeat(preds.shape[-1], axis=1).reshape(-1)
+        # preds = preds.transpose(0, 2, 1).reshape(-1, preds.shape[1])
     topks = [1, 3, 5]
     accs = topk_accuracies(torch.tensor(preds), torch.tensor(targets), topks)
     result_dict = {f"top{k}acc": v for k, v in zip(topks, accs)}
@@ -91,7 +94,7 @@ if __name__ == "__main__":
         "-p1", "--pred1", type=str, required=True, help="Path to .npy preds"
     )
     parser.add_argument(
-        "-p2", "--pred2", type=str, required=True, help="Path to .npy preds"
+        "-p2", "--pred2", type=str, default="", help="Path to .npy preds"
     )
     parser.add_argument(
         "-p3", "--pred3", type=str, default="", help="Path to .npy preds"

@@ -56,7 +56,7 @@ class SgdMultiStepLR(OptimizerMixin):
         )
         steps_per_epoch = (
             self.hparams.limit_train_batches
-            if self.hparams.limit_train_batches
+            if self.hparams.limit_train_batches > 1
             else discounted_steps_per_epoch(
                 len(self.train_dataloader()),
                 self.hparams.num_gpus,
@@ -67,7 +67,6 @@ class SgdMultiStepLR(OptimizerMixin):
             getattr(self.hparams, f"multi_step_lr_epoch{e}") for e in range(1, 6)
         ]
         milestones = [s * steps_per_epoch for s in milestones if s > 0]
-        print("milestones:", milestones)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer, milestones=milestones, gamma=self.hparams.multi_step_lr_gamma
         )

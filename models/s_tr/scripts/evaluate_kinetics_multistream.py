@@ -15,7 +15,7 @@ DS_PATH = DATASETS_PATH / DS_NAME
 subprocess.call(
     [
         "python3",
-        "scripts/two_stream_eval.py",
+        "scripts/multi_stream_eval.py",
         "--log_as",
         f"STr/eval_{DS_NAME}_twostream",
         "--labels",
