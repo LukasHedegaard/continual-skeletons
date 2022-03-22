@@ -17,7 +17,7 @@ class GraphDatasets(RideClassificationDataset):
         c.add(
             name="dataset_name",
             type=str,
-            default="dummy",
+            default="dummy_ntu",
             choices=["ntu60", "ntu120", "kinetics", "dummy_ntu", "dummy_kin"],
             description="Name of dataset",
         )

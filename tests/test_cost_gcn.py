@@ -25,7 +25,7 @@ def default_hparams():
 
 def test_forward_shapes():
     hparams = default_hparams()
-    hparams["dataset_name"] = "dummy"
+    hparams["dataset_name"] = "dummy_ntu"
     net = CoStGcn(hparams)
 
     sample = next(iter(net.train_dataloader()))
@@ -329,7 +329,7 @@ def test_simple_costgcn():
 def test_costgcn():
     # Model definition
     hparams = default_hparams()
-    hparams["dataset_name"] = "dummy"
+    hparams["dataset_name"] = "dummy_ntu"
     hparams["batch_size"] = 1
 
     reg = StGcn(hparams)
@@ -366,7 +366,7 @@ def test_costgcn():
 def test_costgcn_real():
     # Model definition
     hparams = default_hparams()
-    hparams["dataset_name"] = "dummy"
+    hparams["dataset_name"] = "dummy_ntu"
     hparams["batch_size"] = 1
 
     reg = StGcn(hparams)

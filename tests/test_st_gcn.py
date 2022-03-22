@@ -13,7 +13,7 @@ def default_hparams():
 
 def test_forward():
     hparams = default_hparams()
-    hparams["dataset_name"] = "dummy"
+    hparams["dataset_name"] = "dummy_ntu"
     net = StGcn(hparams)
 
     input = torch.rand((hparams["batch_size"], *net.input_shape))
