@@ -59,7 +59,7 @@ def dummy_hparams():
     d = CoAGcnMod.configs().default_values()
     d["max_epochs"] = 1
     d["batch_size"] = 2
-    d["dataset_name"] = "dummy"
+    d["dataset_name"] = "dummy_ntu"
     d["accumulate_grad_batches"] = 1
     return d
 
