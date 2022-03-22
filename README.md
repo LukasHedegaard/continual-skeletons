@@ -1,13 +1,13 @@
 # Continual Spatio-Temporal Graph Convolutional Networks
 
-<!-- [![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539) -->
-<!-- [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018) -->
+[![Paper](http://img.shields.io/badge/paper-arxiv.2203.11009-B31B1B.svg)](https://arxiv.org/abs/2203.11009)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![codecov](https://codecov.io/gh/LukasHedegaard/continual-skeletons/branch/main/graph/badge.svg?token=GLY73KLV58)](https://codecov.io/gh/LukasHedegaard/continual-skeletons)
 [![Framework](https://img.shields.io/badge/Built_to-Ride-643DD9.svg)](https://github.com/LukasHedegaard/ride)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+<!-- [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018) -->
 
-Official codebase for ["Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks"](), including: <!-- TODO: Insert paper link -->
+Official codebase for ["Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks"](2203.11009), including:
 
 - Models: 
 [_Co_ ST-GCN](models/cost_gcn/cost_gcn.py),
@@ -46,22 +46,19 @@ Numbers denote streams for each method.
     git clone https://github.com/LukasHedegaard/continual-skeletons.git
     cd continual-skeletons
     ```
-- (Optionally) create conda environment:
+- Optionally create and activate conda environment:
     ```bash
     conda create --name continual-skeletons python=3.8
+    conda activate continual-skeletons
     ```
 - Install as editable module
     ```bash
     pip install -e .[dev]
     ```
 
-### Test
-Run unit-tests using [pytest](https://github.com/pytest-dev/pytest):
-```bash
-make test
-```
 
 ## Repository structure
+The repository is s
 ```python
 root
 |- datasets/     # Dataset loaders
@@ -84,17 +81,11 @@ root
 |- .env       # Modify path to your dataset here, i.e. DATASETS_PATH=/my/path
 ```
 
-To see an overview of available commands for a model, check the help, e.g.: 
-```bash
-python models/cost_gcn/cost_gcn.py --help
-```
-
-The commands used to produce the paper results are found in the associated scripts folder, e.g.:
-```bash
-python models/cost_gcn/scripts/evaluate_ntu60.py
-```
+## Dataset preparation
+_Coming up_.
 
 ## Models
+Individual folders with relevant scripts are avilable under `/models` for the following models:
 - [ST-GCN](models/st_gcn/st_gcn.py) (baseline)
 - [ST-GCN*](models/st_gcn/st_gcn_mod.py)
 - [_Co_ ST-GCN](models/cost_gcn/cost_gcn.py)
@@ -107,6 +98,16 @@ python models/cost_gcn/scripts/evaluate_ntu60.py
 - [S-TR*](models/s_tr/s_tr_mod.py)
 - [_Co_ S-TR](models/cos_tr/cos_tr.py)
 - [_Co_ S-TR*](models/cos_tr/cos_tr_mod.py)
+
+To see an overview of available commands for a model, check the help, e.g.: 
+```bash
+python models/cost_gcn/cost_gcn.py --help
+```
+
+The commands used to produce the paper results are found in the associated scripts folder, e.g.:
+```bash
+python models/cost_gcn/scripts/evaluate_ntu60.py
+```
 
 ### Pretrained weights
 Trained model weights are available [here](https://drive.google.com/drive/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72?usp=sharing).
