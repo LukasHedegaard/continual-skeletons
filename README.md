@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![codecov](https://codecov.io/gh/LukasHedegaard/continual-skeletons/branch/main/graph/badge.svg?token=GLY73KLV58)](https://codecov.io/gh/LukasHedegaard/continual-skeletons)
 [![Framework](https://img.shields.io/badge/Built_to-Ride-643DD9.svg)](https://github.com/LukasHedegaard/ride)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+<!-- [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) -->
 <!-- [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018) -->
 
 Official codebase for ["Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks"](2203.11009), including:
