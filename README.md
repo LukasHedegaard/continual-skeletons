@@ -139,7 +139,7 @@ To reproduce results:
 ## Citation
 
 ```bibtex
-@article{hedegaard2021costgcn,
+@article{hedegaard2022online,
   title={Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks},
   author={Lukas Hedegaard and Negar Heidari and Alexandros Iosifidis},
   journal={preprint, arXiv: 2203.11009}, 
