@@ -416,17 +416,17 @@ def CoSpatioTemporalBlock(
         return co.Sequential(
             co.Residual(
                 co.Sequential(OrderedDict([("gcn", gcn), ("tcn", tcn)])),
-                phantom_padding=True,
+                residual_shrink=True,
             ),
             relu,
         )
 
     residual = CoTempConv(in_channels, out_channels, kernel_size=1, stride=stride)
 
-    phantom_padding = tcn.receptive_field - 2 * tcn.padding != 1
+    residual_shrink = tcn.receptive_field - 2 * tcn.padding != 1
 
     delay = tcn.delay // stride
-    if phantom_padding:
+    if residual_shrink:
         delay = delay // 2
 
     return co.Sequential(
@@ -435,7 +435,7 @@ def CoSpatioTemporalBlock(
                 OrderedDict(
                     [
                         ("residual", residual),
-                        ("align", co.Delay(delay, auto_shrink=phantom_padding)),
+                        ("align", co.Delay(delay, auto_shrink=residual_shrink)),
                     ]
                 )
             ),

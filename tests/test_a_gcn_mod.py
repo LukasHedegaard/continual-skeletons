@@ -95,7 +95,7 @@ def test_AGcnMod_dummy_params():
     # forward_steps
     o_co2 = co.forward_steps(sample)
     assert torch.equal(target_inds, torch.topk(o_co2, ks).indices)
-    assert torch.allclose(o_co1, o_co2, rtol=1e-4)
+    assert torch.allclose(o_co1, o_co2, rtol=5e-4)
 
 
 def real_hparams():
