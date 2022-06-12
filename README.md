@@ -82,7 +82,58 @@ root
 ```
 
 ## Dataset preparation
-_Coming up_.
+Download the skeleton data of NTU-RGBD-60 and NTU-RGBD-120 from [here](https://rose1.ntu.edu.sg/dataset/actionRecognition/) and put them in [nturgbd_raw](datasets/data_preparation/nturgbd_raw) directory.
+Name the folder of the downloaded skeletons folder for NTU-RGBD-60 and NTU-RGBD-120 as `nturgb+d_skeletons60`, `nturgb+d_skeletons120`, respectively. 
+The skeleton data for [Kinetics](https://arxiv.org/pdf/1705.06950.pdf) dataset is extracted using [Openpose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) toolbox by [ST-GCN](https://github.com/yysijie/st-gcn) authors. 
+The extracted skeleton data called Kinetics-skeleton (7.5GB) can be directly downloaded from [GoogleDrive](https://drive.google.com/drive/folders/1SPQ6FmFsjGg3f59uCWfdUWI-5HJM_YhZ), and it should be placed in [kinetics_raw](datasets/data_preparation/kinetics_raw) directory. 
+
+Before training and testing the models, the datasets should be preprocessed. The downloaded data should be placed in the following directories:
+
+```python
+root
+|- datasets/     
+|- data_preparation/       
+    |- nturgbd_raw\        # Raw NTU-RGBD skeleton data
+        |- nturgb+d_skeletons60\   # Skeleton data for NTU-RGBD-60
+        |- nturgb+d_skeletons120\   # Skeleton data for NTU-RGBD-120
+        |- ...
+        |- ntu60_samples_with_missing_skeletons.txt   # Sample IDs with missing skeletons in NTU-RGBD-60
+        |- ntu120_samples_with_missing_skeletons.txt  # Sample IDs with missing skeletons in NTU-RGBD-120
+  
+   |- kinetics_raw\         # Raw Kinetics data
+        |- kinetics_train\
+        |- ...
+        |- kinetics_val\
+        |- ...
+        |- kinetics_train_label.json
+        |- keintics_val_label.json
+
+```
+For generating the preprocedded data you need to run the following commands: 
+
+```bash
+# NTU-RGBD-60
+python datasets/data_preparation/ntu60_prep.py 
+# NTU-RGBD-120
+python datasets/data_preparation/ntu120_prep.py 
+# Kinetics
+python datasets/data_preparation/kinetics400_prep.py 
+```
+
+For generating bone and motion data for each of the datasets run the following commands:
+```bash
+# Bone generation
+python datasets/data_preparation/bone_data_prep.py 
+# Motion generation
+python datasets/data_preparation/motion_data_prep.py 
+```
+
+The joint and bone skeleton data can be concatenated by running the following command: 
+```bash
+# joint_bone data concatenation
+python datasets/data_preparation/merge_joint_bone_data.py 
+```
+
 
 ## Models
 Individual folders with relevant scripts are avilable under `/models` for the following models:
