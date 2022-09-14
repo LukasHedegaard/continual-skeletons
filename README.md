@@ -106,7 +106,7 @@ root
         |- kinetics_val\
         |- ...
         |- kinetics_train_label.json
-        |- keintics_val_label.json
+        |- kinetics_val_label.json
 
 ```
 For generating the preprocedded data you need to run the following commands: 
