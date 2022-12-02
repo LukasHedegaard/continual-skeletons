@@ -140,15 +140,15 @@ Individual folders with relevant scripts are avilable under `/models` for the fo
 - [ST-GCN](models/st_gcn/st_gcn.py) (baseline)
 - [ST-GCN*](models/st_gcn/st_gcn_mod.py)
 - [_Co_ ST-GCN](models/cost_gcn/cost_gcn.py)
-- [_Co_ ST-GCN*](models/cost_gcn/cost_gcn_mod.py)
+- [_Co_ ST-GCN*](models/cost_gcn_mod/cost_gcn_mod.py)
 - [AGCN](models/a_gcn/a_gcn.py) (baseline)
 - [AGCN*](models/a_gcn/a_gcn_mod.py)
 - [_Co_ AGCN](models/coa_gcn/coa_gcn.py)
-- [_Co_ AGCN*](models/coa_gcn/coa_gcn_mod.py)
+- [_Co_ AGCN*](models/coa_gcn_mod/coa_gcn_mod.py)
 - [S-TR](models/s_tr/s_tr.py) (baseline)
 - [S-TR*](models/s_tr/s_tr_mod.py)
 - [_Co_ S-TR](models/cos_tr/cos_tr.py)
-- [_Co_ S-TR*](models/cos_tr/cos_tr_mod.py)
+- [_Co_ S-TR*](models/cos_tr_mod/cos_tr_mod.py)
 
 To see an overview of available commands for a model, check the help, e.g.: 
 ```bash
