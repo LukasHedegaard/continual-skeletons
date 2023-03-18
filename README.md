@@ -7,7 +7,7 @@
 <!-- [![codecov](https://codecov.io/gh/LukasHedegaard/continual-skeletons/branch/main/graph/badge.svg?token=GLY73KLV58)](https://codecov.io/gh/LukasHedegaard/continual-skeletons) -->
 <!-- [![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018) -->
 
-Official codebase for ["Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks"](https://arxiv.org/abs/2203.11009), including:
+Official codebase for ["Continual Spatio-Temporal Graph Convolutional Networks"](https://arxiv.org/abs/2203.11009) (Pattern Recognition, 2023), including:
 
 - Models: 
 [_Co_ ST-GCN](models/cost_gcn/cost_gcn.py),
