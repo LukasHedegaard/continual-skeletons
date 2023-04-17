@@ -190,10 +190,14 @@ To reproduce results:
 ## Citation
 
 ```bibtex
-@article{hedegaard2022online,
-  title={Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks},
-  author={Lukas Hedegaard and Negar Heidari and Alexandros Iosifidis},
-  journal={preprint, arXiv: 2203.11009}, 
-  year={2022}
+@article{hedegaard2023continual,
+title = {Continual spatio-temporal graph convolutional networks},
+author = {Lukas Hedegaard and Negar Heidari and Alexandros Iosifidis},
+journal = {Pattern Recognition},
+volume = {140},
+pages = {109528},
+year = {2023},
+issn = {0031-3203},
+doi = {https://doi.org/10.1016/j.patcog.2023.109528},
 }
 ```
